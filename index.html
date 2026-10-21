@@ -1,0 +1,457 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#14171c">
+<title>BATAB Connect</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+<style>
+:root{
+  --bg:#14171c; --panel:#1d2128; --panel2:#252a33; --line:#323844;
+  --ink:#f2f4f7; --ink2:#a9b1bd; --ink3:#7b8492;
+  --accent:#f59e0b; --accent-ink:#1a1204;
+  --ok:#22c55e; --warn:#f59e0b; --bad:#ef4444; --info:#60a5fa;
+  --r:14px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 Inter,system-ui,sans-serif}
+body{min-height:100vh;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+.wrap{max-width:520px;margin:0 auto;padding:16px}
+header{display:flex;align-items:center;justify-content:space-between;padding:8px 0 16px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:.2px}
+.brand .mark{width:30px;height:30px;border-radius:8px;background:var(--accent);display:grid;place-items:center;color:var(--accent-ink);font-weight:800;font-size:15px}
+.brand small{display:block;font-weight:500;color:var(--ink3);font-size:12px;margin-top:-2px}
+.who{font-size:13px;color:var(--ink2);text-align:right}
+.who button{background:none;border:0;color:var(--ink3);font-size:12px;padding:2px 0;text-decoration:underline}
+h1{font-size:22px;margin:4px 0 4px}
+h2{font-size:15px;margin:20px 0 8px;color:var(--ink2);font-weight:600;text-transform:uppercase;letter-spacing:.6px}
+p.sub{color:var(--ink2);margin:0 0 16px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:16px;margin-bottom:12px}
+label{display:block;font-size:13px;color:var(--ink2);margin:12px 0 6px;font-weight:500}
+input,select{width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:14px;font-size:18px;font-family:inherit}
+input:focus,select:focus{outline:2px solid var(--accent);outline-offset:1px}
+input.pin{letter-spacing:10px;text-align:center;font-family:'JetBrains Mono',monospace;font-size:24px}
+.btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;border:0;border-radius:12px;padding:16px;font-size:17px;font-weight:600;font-family:inherit;cursor:pointer;margin-top:12px}
+.btn.primary{background:var(--accent);color:var(--accent-ink)}
+.btn.ghost{background:var(--panel2);color:var(--ink);border:1px solid var(--line)}
+.btn.danger{background:var(--bad);color:#fff}
+.btn:disabled{opacity:.5}
+.btn.big{padding:22px;font-size:19px}
+.row{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px}
+.row:last-child{border-bottom:0}
+.row span:first-child{color:var(--ink3)}
+.row span:last-child{text-align:right}
+.mono{font-family:'JetBrains Mono',monospace}
+.badge{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:99px;font-size:12px;font-weight:600}
+.badge.ok{background:rgba(34,197,94,.15);color:var(--ok)}
+.badge.bad{background:rgba(239,68,68,.15);color:var(--bad)}
+.badge.warn{background:rgba(245,158,11,.15);color:var(--warn)}
+.badge.info{background:rgba(96,165,250,.15);color:var(--info)}
+.alert{border-radius:12px;padding:14px;margin:12px 0;font-size:15px}
+.alert.bad{background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.4)}
+.alert.ok{background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.4)}
+.alert.warn{background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.4)}
+.live{display:flex;align-items:center;gap:8px;color:var(--ok);font-weight:600;font-size:14px}
+.live i{width:9px;height:9px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 0 rgba(34,197,94,.7);animation:pulse 1.6s infinite}
+@keyframes pulse{70%{box-shadow:0 0 0 10px rgba(34,197,94,0)}100%{box-shadow:0 0 0 0 rgba(34,197,94,0)}}
+.timer{font-family:'JetBrains Mono',monospace;font-size:34px;margin:6px 0}
+.item{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:8px}
+.item.falla{border-color:rgba(239,68,68,.6)}
+.item .q{font-size:15px;margin-bottom:10px}
+.item .q b{color:var(--bad);font-size:11px;font-weight:700;margin-left:6px;letter-spacing:.4px}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.seg button{border:1px solid var(--line);background:var(--panel2);color:var(--ink2);border-radius:10px;padding:12px;font-size:15px;font-weight:600;font-family:inherit}
+.seg button.on.ok{background:rgba(34,197,94,.18);border-color:var(--ok);color:var(--ok)}
+.seg button.on.bad{background:rgba(239,68,68,.18);border-color:var(--bad);color:var(--bad)}
+.item input{margin-top:8px;font-size:15px;padding:10px}
+.sec{position:sticky;top:0;background:var(--bg);padding:10px 0 6px;color:var(--accent);font-weight:600;font-size:13px;text-transform:uppercase;letter-spacing:.6px;z-index:2}
+.progress{height:6px;background:var(--panel2);border-radius:99px;overflow:hidden;margin:8px 0 16px}
+.progress div{height:100%;background:var(--accent);transition:width .2s}
+.lines{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.lines button{border:1px solid var(--line);background:var(--panel2);color:var(--ink);border-radius:10px;padding:14px 4px;font-weight:600;font-family:inherit;font-size:15px}
+.lines button.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+#scan video{width:100%;border-radius:var(--r);background:#000;aspect-ratio:1/1;object-fit:cover}
+.scanbox{position:relative}
+.scanbox:after{content:"";position:absolute;inset:18%;border:3px solid var(--accent);border-radius:16px;box-shadow:0 0 0 999px rgba(0,0,0,.35)}
+.muted{color:var(--ink3);font-size:13px}
+.hidden{display:none!important}
+.spinner{width:22px;height:22px;border:3px solid rgba(0,0,0,.25);border-top-color:currentColor;border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+footer{text-align:center;color:var(--ink3);font-size:11px;padding:24px 0 8px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand"><div class="mark">B</div><div>BATAB Connect<small>Activos y mantenimiento</small></div></div>
+    <div class="who hidden" id="who"><div id="whoName"></div><button onclick="salir()">Salir</button></div>
+  </header>
+  <main id="app"></main>
+  <footer>BATAB Connect · v<span id="ver"></span> · prueba</footer>
+</div>
+
+<script>
+const VERSION = "0.1.0";
+const API = "https://szrcmvlgxxpmvgrfmxak.supabase.co/functions/v1/connect-api";
+document.getElementById("ver").textContent = VERSION;
+
+const S = {
+  token: lsGet("bc_token"), operador: JSON.parse(lsGet("bc_op") || "null"),
+  sesion: null, ficha: null, qr: null, resp: {}, linea: null, timer: null, stream: null,
+};
+function lsGet(k){ try{return localStorage.getItem(k)}catch(e){return null} }
+function lsSet(k,v){ try{ v===null?localStorage.removeItem(k):localStorage.setItem(k,v) }catch(e){} }
+const $ = (h) => { document.getElementById("app").innerHTML = h; window.scrollTo(0,0); };
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const fmtHora = (d) => new Date(d).toLocaleTimeString("es-MX",{hour:"2-digit",minute:"2-digit"});
+const fmtNum = (n) => n==null ? "—" : Number(n).toLocaleString("es-MX",{maximumFractionDigits:1});
+
+async function api(accion, data = {}) {
+  const r = await fetch(API, { method: "POST", headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({ accion, token: S.token, ...data }) });
+  const j = await r.json().catch(() => ({ ok:false, error:"Sin respuesta del servidor" }));
+  if (j.codigo === "sesion_vencida") { salir(true); throw new Error(j.error); }
+  return j;
+}
+function ocupado(btn, on, texto) {
+  if (!btn) return;
+  btn.disabled = on;
+  btn.innerHTML = on ? '<div class="spinner"></div>' : texto;
+}
+
+/* ---------------- Arranque ---------------- */
+async function iniciarApp() {
+  const q = new URLSearchParams(location.search).get("q");
+  if (q) { S.qr = q; history.replaceState(null, "", location.pathname); }
+  if (!S.token) return vistaLogin();
+  pintarQuien();
+  try {
+    const r = await api("yo");
+    if (r.ok) { S.sesion = r.sesion; }
+  } catch (e) { return; }
+  if (S.qr) return abrirFicha(S.qr);
+  vistaInicio();
+}
+function pintarQuien() {
+  const w = document.getElementById("who");
+  if (S.operador) { w.classList.remove("hidden"); document.getElementById("whoName").textContent = S.operador.nombre; }
+  else w.classList.add("hidden");
+}
+function salir(vencida) {
+  pararCamara(); clearInterval(S.timer);
+  S.token = null; S.operador = null; lsSet("bc_token", null); lsSet("bc_op", null);
+  pintarQuien(); vistaLogin(vencida ? "Tu acceso venció. Entra de nuevo." : null);
+}
+
+/* ---------------- Login ---------------- */
+function vistaLogin(msg) {
+  $(`
+    <h1>Entrar</h1>
+    <p class="sub">Usa el mismo código y PIN de la app de producción.</p>
+    ${msg ? `<div class="alert warn">${esc(msg)}</div>` : ""}
+    <div class="card">
+      <label for="cod">Código</label>
+      <input id="cod" autocomplete="username" autocapitalize="characters" placeholder="Ej. GEHO" value="${esc(lsGet("bc_cod")||"")}">
+      <label for="pin">PIN</label>
+      <input id="pin" class="pin" type="password" inputmode="numeric" maxlength="6" autocomplete="current-password" placeholder="••••••">
+      <div id="err"></div>
+      <button class="btn primary big" id="bLogin" onclick="login()">Entrar</button>
+    </div>
+    ${S.qr ? `<p class="muted">Después de entrar se abrirá el equipo que escaneaste.</p>` : ""}
+  `);
+  const pin = document.getElementById("pin");
+  pin.addEventListener("keydown", e => { if (e.key === "Enter") login(); });
+  (lsGet("bc_cod") ? pin : document.getElementById("cod")).focus();
+}
+async function login() {
+  const b = document.getElementById("bLogin");
+  const codigo = document.getElementById("cod").value.trim().toUpperCase();
+  const pin = document.getElementById("pin").value.trim();
+  ocupado(b, true);
+  try {
+    const r = await api("login", { codigo, pin });
+    if (!r.ok) { document.getElementById("err").innerHTML = `<div class="alert bad">${esc(r.error)}</div>`; return ocupado(b, false, "Entrar"); }
+    S.token = r.token; S.operador = r.operador; S.sesion = r.sesion;
+    lsSet("bc_token", r.token); lsSet("bc_op", JSON.stringify(r.operador)); lsSet("bc_cod", codigo);
+    pintarQuien();
+    if (S.qr) return abrirFicha(S.qr);
+    vistaInicio();
+  } catch (e) { document.getElementById("err").innerHTML = `<div class="alert bad">${esc(e.message)}</div>`; ocupado(b, false, "Entrar"); }
+}
+
+/* ---------------- Inicio ---------------- */
+function vistaInicio(aviso) {
+  clearInterval(S.timer);
+  const s = S.sesion;
+  $(`
+    ${aviso || ""}
+    ${s ? `
+      <div class="card">
+        <div class="live"><i></i> En operación</div>
+        <h1 style="margin-top:8px">${esc(s.activo?.nombre)}</h1>
+        <div class="muted mono">${esc(s.activo?.codigo)}</div>
+        <div class="timer" id="tmr">00:00:00</div>
+        <div class="row"><span>Inicio</span><span>${fmtHora(s.inicio)}</span></div>
+        <div class="row"><span>Lectura inicial</span><span class="mono">${fmtNum(s.lectura_inicio)}</span></div>
+        ${s.linea_atendida ? `<div class="row"><span>Línea atendida</span><span>${esc(s.linea_atendida)}</span></div>` : ""}
+        <button class="btn danger big" onclick="vistaCerrar()">Terminar uso</button>
+      </div>` : `
+      <h1>Hola, ${esc((S.operador?.nombre||"").split(" ")[0])}</h1>
+      <p class="sub">Escanea el código QR del equipo que vas a operar.</p>`}
+    <button class="btn ${s ? "ghost" : "primary big"}" onclick="vistaEscanear()">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><rect x="7" y="7" width="10" height="10" rx="1"/></svg>
+      ${s ? "Escanear otro equipo" : "Escanear QR"}
+    </button>
+    <button class="btn ghost" onclick="vistaCodigo()">Escribir código del equipo</button>
+  `);
+  if (s) {
+    const t0 = new Date(s.inicio).getTime();
+    const tick = () => { const d = Math.max(0, Date.now() - t0) / 1000;
+      const h = String(Math.floor(d/3600)).padStart(2,"0"), m = String(Math.floor(d%3600/60)).padStart(2,"0"), sg = String(Math.floor(d%60)).padStart(2,"0");
+      const el = document.getElementById("tmr"); if (el) el.textContent = `${h}:${m}:${sg}`; };
+    tick(); S.timer = setInterval(tick, 1000);
+  }
+}
+
+/* ---------------- Escaneo ---------------- */
+function vistaCodigo() {
+  $(`
+    <h1>Código del equipo</h1>
+    <p class="sub">Si el QR está dañado, escribe el número económico.</p>
+    <div class="card">
+      <label for="cq">Número económico</label>
+      <input id="cq" autocapitalize="characters" placeholder="Ej. BAT-MP-CFR02">
+      <button class="btn primary" onclick="abrirFicha(document.getElementById('cq').value)">Buscar</button>
+    </div>
+    <button class="btn ghost" onclick="vistaInicio()">Regresar</button>
+  `);
+  document.getElementById("cq").focus();
+}
+async function vistaEscanear() {
+  clearInterval(S.timer);
+  $(`
+    <h1>Escanear QR</h1>
+    <p class="sub">Apunta la cámara a la placa del equipo.</p>
+    <div id="scan" class="scanbox"><video id="vid" playsinline muted></video></div>
+    <div id="scanErr"></div>
+    <button class="btn ghost" onclick="pararCamara();vistaInicio()">Cancelar</button>
+  `);
+  try {
+    S.stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+    const v = document.getElementById("vid"); v.srcObject = S.stream; await v.play();
+    const c = document.createElement("canvas"), ctx = c.getContext("2d", { willReadFrequently: true });
+    const det = ("BarcodeDetector" in window) ? new BarcodeDetector({ formats: ["qr_code"] }) : null;
+    const loop = async () => {
+      if (!S.stream) return;
+      let txt = null;
+      try {
+        if (det) { const r = await det.detect(v); if (r[0]) txt = r[0].rawValue; }
+        else if (v.videoWidth) {
+          c.width = v.videoWidth; c.height = v.videoHeight; ctx.drawImage(v, 0, 0);
+          const r = jsQR(ctx.getImageData(0, 0, c.width, c.height).data, c.width, c.height); if (r) txt = r.data;
+        }
+      } catch (e) {}
+      if (txt) { if (navigator.vibrate) navigator.vibrate(80); pararCamara(); return abrirFicha(extraerQR(txt)); }
+      requestAnimationFrame(loop);
+    };
+    loop();
+  } catch (e) {
+    document.getElementById("scanErr").innerHTML = `<div class="alert bad">No se pudo abrir la cámara. Revisa el permiso de cámara del navegador o escribe el código del equipo.</div>
+      <button class="btn primary" onclick="vistaCodigo()">Escribir código</button>`;
+  }
+}
+function pararCamara() { if (S.stream) { S.stream.getTracks().forEach(t => t.stop()); S.stream = null; } }
+function extraerQR(txt) {
+  try { const u = new URL(txt); return u.searchParams.get("q") || txt; } catch (e) { return txt; }
+}
+
+/* ---------------- Ficha ---------------- */
+async function abrirFicha(qr) {
+  qr = String(qr || "").trim(); if (!qr) return;
+  S.qr = qr; S.resp = {}; S.linea = null;
+  $(`<div class="card" style="text-align:center"><div class="spinner" style="margin:20px auto;color:var(--accent)"></div>Buscando equipo…</div>`);
+  let f;
+  try { f = await api("ficha", { qr }); } catch (e) { return; }
+  if (!f.ok) return vistaInicio(`<div class="alert bad">${esc(f.error)}</div>`);
+  S.ficha = f; S.qr = qr;
+  const a = f.activo, esp = a.especificaciones || {};
+  const estados = { operativo:["ok","Operativo"], no_apto:["bad","No apto"], en_reparacion:["warn","En reparación"], fuera_servicio:["bad","Fuera de servicio"], baja:["bad","Baja"] };
+  const [cls, txt] = estados[a.estado] || ["info", a.estado];
+  const detenido = a.estado !== "operativo";
+  const ses = f.sesion_en_equipo;
+  $(`
+    <div class="card">
+      <span class="badge ${cls}">${txt}</span>
+      <h1 style="margin-top:10px">${esc(a.nombre)}</h1>
+      <div class="muted mono">${esc(a.codigo)}</div>
+      <div style="margin-top:12px">
+        <div class="row"><span>Tipo</span><span>${esc(a.tipo)}</span></div>
+        <div class="row"><span>Marca / modelo</span><span>${esc([a.marca, a.modelo].filter(Boolean).join(" "))}</span></div>
+        <div class="row"><span>No. de serie</span><span class="mono">${esc(a.num_serie || "—")}</span></div>
+        ${esp.pin ? `<div class="row"><span>PIN</span><span class="mono">${esc(esp.pin)}</span></div>` : ""}
+        <div class="row"><span>${a.medidor === "km" ? "Odómetro" : "Horómetro"}</span><span class="mono">${fmtNum(a.lectura_actual)}</span></div>
+        <div class="row"><span>Ubicación</span><span>${esc(a.ubicacion || "—")}</span></div>
+        ${f.lineas?.length ? `<div class="row"><span>Da servicio a</span><span>${f.lineas.map(esc).join(", ")}</span></div>` : ""}
+      </div>
+    </div>
+
+    ${ses && !ses.es_mia ? `<div class="alert warn">Lo está operando <b>${esc(ses.operador)}</b> desde las ${fmtHora(ses.inicio)}. Si inicias, su sesión se cierra.</div>` : ""}
+    ${ses && ses.es_mia ? `<div class="alert ok">Ya lo estás operando desde las ${fmtHora(ses.inicio)}.</div>` : ""}
+    ${!f.autorizado ? `<div class="alert bad"><b>No estás autorizado</b> para operar este equipo. Avisa a tu supervisor.</div>` : ""}
+    ${detenido ? `<div class="alert bad">Este equipo no se puede operar hasta que mantenimiento lo libere.</div>` : ""}
+
+    ${f.autorizado && !detenido && !(ses && ses.es_mia) ? `
+      <button class="btn primary big" onclick="${f.requiere_checklist ? "vistaChecklist()" : "vistaArranque()"}">
+        ${f.requiere_checklist ? "Iniciar · check-list diario" : "Iniciar uso"}</button>
+      ${!f.requiere_checklist ? `<p class="muted" style="text-align:center">El check-list de este equipo ya se hizo en este turno.</p>` : ""}` : ""}
+    ${ses && ses.es_mia ? `<button class="btn danger big" onclick="vistaCerrar()">Terminar uso</button>` : ""}
+
+    <h2>Componentes</h2>
+    <div class="card">
+      ${(f.componentes||[]).map(c => `<div class="row"><span>${esc(c.nombre)}</span><span class="mono">${esc(c.modelo || "")}${c.num_serie ? " · S/N " + esc(c.num_serie) : (c.modelo ? "" : "—")}</span></div>`).join("") || `<div class="muted">Sin componentes registrados.</div>`}
+    </div>
+    ${Object.keys(esp).length ? `<h2>Especificaciones</h2><div class="card">
+      ${[["motor","Motor"],["potencia","Potencia"],["transmision","Transmisión"],["peso_operativo_kg","Peso operativo (kg)"],["carga_normal_kg","Carga normal (kg)"],["bote_m3","Bote (m³)"],["funcion","Función"]]
+        .filter(([k]) => esp[k] != null).map(([k,l]) => `<div class="row"><span>${l}</span><span>${esc(typeof esp[k]==="number"?fmtNum(esp[k]):esp[k])}</span></div>`).join("")}
+    </div>` : ""}
+    <button class="btn ghost" onclick="vistaInicio()">Regresar</button>
+  `);
+}
+
+/* ---------------- Check-list ---------------- */
+function vistaChecklist() {
+  const items = S.ficha.checklist.filter(i => i.tipo === "ok_falla");
+  let sec = "";
+  const html = items.map(i => {
+    const head = i.seccion !== sec ? `<div class="sec">${esc(sec = i.seccion)}</div>` : "";
+    return head + `
+      <div class="item" id="it${i.id}">
+        <div class="q">${i.orden}. ${esc(i.pregunta)}${i.critica ? "<b>CRÍTICO</b>" : ""}</div>
+        <div class="seg">
+          <button id="ok${i.id}" onclick="marcar(${i.id}, true)">✓ Bien</button>
+          <button id="fa${i.id}" onclick="marcar(${i.id}, false)">✕ Falla</button>
+        </div>
+        <input id="co${i.id}" class="hidden" placeholder="¿Qué encontraste?" oninput="S.resp[${i.id}].comentario=this.value">
+      </div>`;
+  }).join("");
+  $(`
+    <h1>Check-list diario</h1>
+    <p class="sub">${esc(S.ficha.activo.nombre)} · <span class="mono">${esc(S.ficha.activo.codigo)}</span></p>
+    <div class="progress"><div id="prog" style="width:0"></div></div>
+    <button class="btn ghost" style="margin:0 0 12px" onclick="todoBien()">Marcar todo como bien</button>
+    ${html}
+    <button class="btn primary big" onclick="vistaArranque()">Continuar</button>
+    <button class="btn ghost" onclick="abrirFicha(S.qr)">Regresar</button>
+  `);
+  for (const id in S.resp) pintarItem(+id);
+  progreso();
+}
+function marcar(id, ok) {
+  S.resp[id] = { item_id: id, ok, comentario: S.resp[id]?.comentario || "" };
+  pintarItem(id); progreso();
+}
+function pintarItem(id) {
+  const r = S.resp[id]; if (!r) return;
+  document.getElementById("ok"+id).className = r.ok ? "on ok" : "";
+  document.getElementById("fa"+id).className = r.ok ? "" : "on bad";
+  document.getElementById("it"+id).classList.toggle("falla", !r.ok);
+  const co = document.getElementById("co"+id); co.classList.toggle("hidden", r.ok); if (!r.ok) co.value = r.comentario || "";
+}
+function todoBien() { S.ficha.checklist.filter(i => i.tipo === "ok_falla").forEach(i => { if (!S.resp[i.id]) marcar(i.id, true); }); }
+function progreso() {
+  const tot = S.ficha.checklist.filter(i => i.tipo === "ok_falla").length;
+  const n = Object.keys(S.resp).length;
+  const el = document.getElementById("prog"); if (el) el.style.width = (tot ? n / tot * 100 : 0) + "%";
+}
+
+/* ---------------- Arranque (lectura + línea) ---------------- */
+function vistaArranque(msg) {
+  const f = S.ficha, a = f.activo;
+  const items = f.checklist.filter(i => i.tipo === "ok_falla");
+  if (f.requiere_checklist) {
+    const falta = items.filter(i => !S.resp[i.id]).length;
+    if (falta) { vistaChecklist(); return alert(`Faltan ${falta} puntos por contestar.`); }
+  }
+  const fallas = items.filter(i => S.resp[i.id] && !S.resp[i.id].ok);
+  const crit = fallas.filter(i => i.critica);
+  $(`
+    <h1>Iniciar uso</h1>
+    <p class="sub">${esc(a.nombre)} · <span class="mono">${esc(a.codigo)}</span></p>
+    ${crit.length ? `<div class="alert bad"><b>${crit.length} falla(s) crítica(s).</b> Al enviar, el equipo quedará NO APTO y se avisará a mantenimiento.</div>`
+      : fallas.length ? `<div class="alert warn">${fallas.length} observación(es). Podrás operar y se avisará a mantenimiento.</div>` : ""}
+    ${msg ? `<div class="alert bad">${esc(msg)}</div>` : ""}
+    <div class="card">
+      <label for="lec">${a.medidor === "km" ? "Odómetro actual (km)" : "Horómetro actual (horas)"}</label>
+      <input id="lec" type="number" inputmode="decimal" step="0.1" placeholder="${a.lectura_actual != null ? "Último: " + fmtNum(a.lectura_actual) : "Ej. 1250.5"}">
+      ${f.lineas?.length > 1 ? `
+        <label>¿A qué línea vas a dar servicio?</label>
+        <div class="lines">${f.lineas.map(l => `<button id="ln${l}" onclick="elegirLinea('${l}')">${({"1B":"Besser 1","2B":"Besser 2","3C":"Columbia"})[l] || l}</button>`).join("")}</div>` : ""}
+    </div>
+    <button class="btn ${crit.length ? "danger" : "primary"} big" id="bIni" onclick="enviarInicio()">${crit.length ? "Reportar equipo no apto" : "Iniciar"}</button>
+    <button class="btn ghost" onclick="${f.requiere_checklist ? "vistaChecklist()" : "abrirFicha(S.qr)"}">Regresar</button>
+  `);
+  if (S.linea) elegirLinea(S.linea);
+}
+function elegirLinea(l) { S.linea = l; document.querySelectorAll(".lines button").forEach(b => b.classList.toggle("on", b.id === "ln"+l)); }
+function ubicacion() {
+  return new Promise(res => {
+    if (!navigator.geolocation) return res({});
+    navigator.geolocation.getCurrentPosition(p => res({ lat: p.coords.latitude, lng: p.coords.longitude }), () => res({}), { timeout: 5000, maximumAge: 60000 });
+  });
+}
+async function enviarInicio() {
+  const b = document.getElementById("bIni"), txt = b.innerHTML;
+  const lectura = document.getElementById("lec").value;
+  ocupado(b, true);
+  const pos = await ubicacion();
+  try {
+    const r = await api("iniciar", { qr: S.qr, lectura, respuestas: Object.values(S.resp), linea: S.linea, ...pos });
+    if (r.ok) {
+      S.sesion = r.sesion; S.resp = {};
+      return vistaInicio(`<div class="alert ${r.checklist === "apto_observaciones" ? "warn" : "ok"}">${esc(r.mensaje)}</div>`);
+    }
+    if (r.codigo === "no_apto") { S.resp = {}; return vistaInicio(`<div class="alert bad">${esc(r.error)}</div>`); }
+    if (r.codigo === "checklist_incompleto") { return vistaChecklist(); }
+    vistaArranque(r.error);
+  } catch (e) { ocupado(b, false, txt); }
+}
+
+/* ---------------- Cerrar ---------------- */
+function vistaCerrar(msg) {
+  clearInterval(S.timer);
+  const s = S.sesion;
+  const km = s.activo?.tipo?.medidor === "km";
+  $(`
+    <h1>Terminar uso</h1>
+    <p class="sub">${esc(s.activo?.nombre)} · <span class="mono">${esc(s.activo?.codigo)}</span></p>
+    ${msg ? `<div class="alert bad">${esc(msg)}</div>` : ""}
+    <div class="card">
+      <div class="row"><span>Inicio</span><span>${fmtHora(s.inicio)}</span></div>
+      <div class="row"><span>Lectura inicial</span><span class="mono">${fmtNum(s.lectura_inicio)}</span></div>
+      <label for="lecf">${km ? "Odómetro final (km)" : "Horómetro final (horas)"}</label>
+      <input id="lecf" type="number" inputmode="decimal" step="0.1" placeholder="Igual o mayor a ${fmtNum(s.lectura_inicio)}">
+    </div>
+    <button class="btn danger big" id="bFin" onclick="enviarCierre()">Terminar</button>
+    <button class="btn ghost" onclick="vistaInicio()">Regresar</button>
+  `);
+}
+async function enviarCierre() {
+  const b = document.getElementById("bFin");
+  ocupado(b, true);
+  try {
+    const r = await api("cerrar", { lectura: document.getElementById("lecf").value });
+    if (!r.ok) return vistaCerrar(r.error);
+    S.sesion = null;
+    vistaInicio(`<div class="alert ok"><b>Uso terminado.</b><br>
+      Tiempo: ${fmtNum(r.horas)} h${r.horas_horometro != null ? ` · Horómetro: ${fmtNum(r.horas_horometro)} h` : ""}
+      ${r.costo_mano_obra != null ? `<br><span class="muted">Mano de obra: $${fmtNum(r.costo_mano_obra)}</span>` : ""}</div>`);
+  } catch (e) { ocupado(b, false, "Terminar"); }
+}
+
+iniciarApp();
+</script>
+</body>
+</html>
