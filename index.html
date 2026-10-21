@@ -5,6 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#14171c">
 <title>BATAB Connect</title>
+<link rel="icon" type="image/svg+xml" href="img/icon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32.png">
+<link rel="apple-touch-icon" href="img/apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Connect">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
@@ -22,7 +29,7 @@ body{min-height:100vh;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bot
 .wrap{max-width:520px;margin:0 auto;padding:16px}
 header{display:flex;align-items:center;justify-content:space-between;padding:8px 0 16px}
 .brand{display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:.2px}
-.brand .mark{width:30px;height:30px;border-radius:8px;background:var(--accent);display:grid;place-items:center;color:var(--accent-ink);font-weight:800;font-size:15px}
+.brand .mark{width:34px;height:34px;border-radius:9px;display:block}
 .brand small{display:block;font-weight:500;color:var(--ink3);font-size:12px;margin-top:-2px}
 .who{font-size:13px;color:var(--ink2);text-align:right}
 .who button{background:none;border:0;color:var(--ink3);font-size:12px;padding:2px 0;text-decoration:underline}
@@ -86,7 +93,7 @@ footer{text-align:center;color:var(--ink3);font-size:11px;padding:24px 0 8px}
 <body>
 <div class="wrap">
   <header>
-    <div class="brand"><div class="mark">B</div><div>BATAB Connect<small>Activos y mantenimiento</small></div></div>
+    <div class="brand"><img class="mark" src="img/icon.svg" alt=""><div>BATAB Connect<small>Activos y mantenimiento</small></div></div>
     <div class="who hidden" id="who"><div id="whoName"></div><button onclick="salir()">Salir</button></div>
   </header>
   <main id="app"></main>
@@ -94,7 +101,7 @@ footer{text-align:center;color:var(--ink3);font-size:11px;padding:24px 0 8px}
 </div>
 
 <script>
-const VERSION = "0.1.0";
+const VERSION = "0.1.1";
 const API = "https://szrcmvlgxxpmvgrfmxak.supabase.co/functions/v1/connect-api";
 document.getElementById("ver").textContent = VERSION;
 
