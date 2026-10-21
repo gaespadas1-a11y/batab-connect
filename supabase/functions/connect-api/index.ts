@@ -1,22 +1,28 @@
-// connect-api v0.2.0 · BATAB Connect
+// connect-api v0.3.0 · BATAB Connect
 // Única puerta de la app hacia la base de datos. El navegador nunca toca las tablas.
 // POST { accion, token?, ... }
-//   login   { codigo, pin }                    -> { ok, token, operador, sesion }
-//   yo      { token }                          -> { ok, operador, sesion }
-//   ficha   { token, qr }                      -> ficha del equipo (mt_ficha)
-//   iniciar { token, qr, lectura, respuestas, linea, lat, lng }  (mt_iniciar_uso)
-//   cerrar  { token, lectura }                 (mt_cerrar_uso)
-//   reportar { token, qr?, tipo, puede_operar, descripcion }  (mt_reportar) + aviso
-//   iniciar con lineas[] y observaciones usa mt_iniciar_uso_v2 + aviso
+//   login    { codigo, pin }                     -> { ok, token, operador, perfil, sesion }
+//   yo       { token }                           -> { ok, operador, perfil, sesion }
+//   ficha    { token, qr }                       -> ficha del equipo (mt_ficha)
+//   iniciar  { token, qr, lectura, respuestas, lineas[], observaciones, fotos[] }  (mt_iniciar_uso_v2) + aviso
+//   iniciar  { token, qr, lectura, respuestas, linea }   (mt_iniciar_uso, app 0.1.x)
+//   cerrar   { token, lectura }                  (mt_cerrar_uso)
+//   reportar { token, qr?, tipo, puede_operar, descripcion, fotos[] }  (mt_reportar) + aviso
+//   bandeja  { token, estados? }                 (mt_bandeja) con enlaces temporales a fotos
+//   estado_reporte { token, reporte_id, estado, nota, liberar, fotos[] }  (mt_reporte_estado) + aviso si se libera
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import bcrypt from "https://esm.sh/bcryptjs@2.4.3";
 
-const VERSION = "0.2.0";
-// Avisos: por ahora correo (función enviar-correo). WhatsApp se agrega como segundo canal.
+const VERSION = "0.3.0";
+// Avisos: correo (función enviar-correo). WhatsApp se agrega como segundo canal.
 const CORREO_URL = Deno.env.get("SUPABASE_URL")! + "/functions/v1/enviar-correo";
 const CORREO_GUARD = "BATAB-CORREO-2026";
 const CORREO_FROM = "ceo3@batab.mx";
 const APP_URL = "https://gaespadas1-a11y.github.io/batab-connect/";
+const BUCKET = "connect_fotos";
+const MAX_FOTOS = 4;
+const MAX_FOTO_BYTES = 3_000_000;
+const DIAS_ENLACE_CORREO = 30;
 const CORS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -60,65 +66,138 @@ async function sesionAbierta(operadorId: string) {
     .eq("operador_id", operadorId).is("fin", null).maybeSingle();
   return data ?? null;
 }
+async function perfil(operadorId: string) {
+  const { data } = await sb.from("mt_perfiles").select("roles,es_prueba").eq("operador_id", operadorId).maybeSingle();
+  return data ?? { roles: ["operador"], es_prueba: false };
+}
 
+// ---------------- Fotos ----------------
+// Recibe fotos como "data:image/jpeg;base64,..." (la app ya las reduce) y las guarda en el bucket privado.
+async function guardarFotos(reporteId: string, operadorId: string, fotos: unknown, etapa = "reporte") {
+  if (!Array.isArray(fotos) || !fotos.length) return 0;
+  let n = 0;
+  for (const f of fotos.slice(0, MAX_FOTOS)) {
+    const m = /^data:(image\/(jpeg|png|webp));base64,(.+)$/.exec(String(f || ""));
+    if (!m) continue;
+    const bytes = Uint8Array.from(atob(m[3]), (c) => c.charCodeAt(0));
+    if (bytes.length > MAX_FOTO_BYTES) continue;
+    const ext = m[2] === "jpeg" ? "jpg" : m[2];
+    const ruta = `reportes/${reporteId}/${crypto.randomUUID()}.${ext}`;
+    const { error } = await sb.storage.from(BUCKET).upload(ruta, bytes, { contentType: m[1], upsert: false });
+    if (error) continue;
+    await sb.from("mt_reporte_fotos").insert({ reporte_id: reporteId, ruta, subida_por: operadorId, etapa });
+    n++;
+  }
+  return n;
+}
+async function enlaces(rutas: string[], segundos: number) {
+  if (!rutas?.length) return [];
+  const { data } = await sb.storage.from(BUCKET).createSignedUrls(rutas, segundos);
+  return (data || []).map((d) => d.signedUrl).filter(Boolean) as string[];
+}
+
+// ---------------- Avisos ----------------
 const escH = (s: unknown) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]!));
 const LINEAS: Record<string, string> = { "1B": "Besser 1", "2B": "Besser 2", "3C": "Columbia" };
+const td = 'style="color:#6B7280;padding:2px 12px 2px 0;vertical-align:top"';
 
-// Envía UN aviso agrupado por los reportes recién creados y lo registra en la bitácora.
+async function destinatarios(lineas: string[], esPrueba: boolean) {
+  const { data: dest } = await sb.from("mt_avisos_destinos").select("rol,linea,nombre,email,ambito").eq("activo", true)
+    .eq("ambito", esPrueba ? "prueba" : "real");
+  const para = (dest || []).filter((d: any) => d.email && (d.rol === "mantenimiento" || d.linea === null || lineas.includes(d.linea)));
+  return {
+    correos: [...new Set(para.map((d: any) => String(d.email).toLowerCase()))],
+    nombres: para.map((d: any) => `${d.nombre} (${d.rol === "mantenimiento" ? "taller" : "área"})`),
+  };
+}
+async function enviarCorreo(to: string[], titulo: string, html: string) {
+  if (!to.length) return { ok: false, detalle: "Sin destinatarios configurados" };
+  try {
+    const r = await fetch(CORREO_URL, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ guard: CORREO_GUARD, from: CORREO_FROM, to, subject: `[BATAB Connect] ${titulo}`, titulo, html }),
+    });
+    return { ok: r.ok, detalle: (await r.text()).slice(0, 500) };
+  } catch (e) { return { ok: false, detalle: (e as Error).message }; }
+}
+function pie(nombres: string[], esPrueba: boolean) {
+  return `<p style="margin:16px 0 0;font-size:12px;color:#6B7280">` +
+    (esPrueba ? `<b>PRUEBA</b> · En operación real lo recibirían: ${escH(nombres.join(", ")) || "—"}<br>` : `Enviado a: ${escH(nombres.join(", "))}<br>`) +
+    `Aviso automático de <a href="${APP_URL}">BATAB Connect</a>.</p>`;
+}
+
+// Un aviso agrupado por los reportes recién creados.
 async function avisar(ids: string[]) {
   if (!ids?.length) return;
   const { data: reps } = await sb.from("mt_reportes")
-    .select("id,folio,tipo,critico,puede_operar,descripcion,lineas,origen,created_at,activo:mt_activos(codigo,nombre,estado),operador:operadores(nombre)")
+    .select("id,folio,tipo,critico,puede_operar,descripcion,lineas,origen,created_at,operador_id,activo:mt_activos(codigo,nombre,estado),operador:operadores(nombre)")
     .in("id", ids).order("folio");
   if (!reps?.length) return;
-  const lineas = [...new Set(reps.flatMap((r: any) => r.lineas || []))];
-  const { data: dest } = await sb.from("mt_avisos_destinos").select("rol,linea,nombre,email").eq("activo", true);
-  const para = (dest || []).filter((d: any) => d.email && (d.rol === "mantenimiento" || d.linea === null || lineas.includes(d.linea)));
-  const correos = [...new Set(para.map((d: any) => String(d.email).toLowerCase()))];
   const r0: any = reps[0];
+  const esPrueba = (await perfil(r0.operador_id)).es_prueba;
+  const lineas = [...new Set(reps.flatMap((r: any) => r.lineas || []))] as string[];
+  const { correos, nombres } = await destinatarios(lineas, esPrueba);
+  const { data: fotos } = await sb.from("mt_reporte_fotos").select("ruta").in("reporte_id", ids).order("created_at");
+  const urls = await enlaces((fotos || []).map((f: any) => f.ruta), DIAS_ENLACE_CORREO * 86400);
+
   const detenido = reps.some((r: any) => !r.puede_operar) || r0.activo?.estado === "no_apto";
   const fecha = new Date(r0.created_at).toLocaleString("es-MX", { timeZone: "America/Mexico_City", dateStyle: "medium", timeStyle: "short" });
-  const titulo = detenido ? `EQUIPO DETENIDO · ${r0.activo?.codigo}` : `Observación · ${r0.activo?.codigo}`;
+  const titulo = `${esPrueba ? "PRUEBA · " : ""}${detenido ? "EQUIPO DETENIDO" : "Observación"} · ${r0.activo?.codigo}`;
   const filas = reps.map((r: any) =>
     `<tr><td style="padding:6px 8px;border-bottom:1px solid #eee;white-space:nowrap">#${r.folio}</td>` +
     `<td style="padding:6px 8px;border-bottom:1px solid #eee">${r.critico ? '<b style="color:#B91C1C">CRÍTICO</b> · ' : ""}${r.tipo === "falla" ? "Falla" : "Observación"}</td>` +
     `<td style="padding:6px 8px;border-bottom:1px solid #eee">${escH(r.descripcion)}</td></tr>`).join("");
+  const galeria = urls.length
+    ? `<p style="margin:16px 0 6px"><b>Evidencia (${urls.length} foto${urls.length > 1 ? "s" : ""})</b></p>` +
+      urls.map((u, i) => `<a href="${u}"><img src="${u}" alt="Foto ${i + 1}" width="150" style="width:150px;height:150px;object-fit:cover;border-radius:6px;margin:0 6px 6px 0;border:1px solid #ddd"></a>`).join("") +
+      `<p style="margin:4px 0 0;font-size:12px;color:#6B7280">Toca una foto para verla completa. Los enlaces vencen en ${DIAS_ENLACE_CORREO} días.</p>`
+    : "";
   const html =
     `<p style="margin:0 0 12px">${detenido
       ? '<b style="color:#B91C1C">El equipo quedó NO APTO y no debe operarse hasta que mantenimiento lo libere.</b>'
       : "El equipo sigue operando; revisar en la próxima oportunidad."}</p>` +
     `<table style="border-collapse:collapse;font-size:14px;margin-bottom:12px">` +
-    `<tr><td style="color:#6B7280;padding:2px 12px 2px 0">Equipo</td><td><b>${escH(r0.activo?.nombre)}</b> (${escH(r0.activo?.codigo)})</td></tr>` +
-    `<tr><td style="color:#6B7280;padding:2px 12px 2px 0">Reportó</td><td>${escH(r0.operador?.nombre)}</td></tr>` +
-    `<tr><td style="color:#6B7280;padding:2px 12px 2px 0">Fecha</td><td>${fecha}</td></tr>` +
-    `<tr><td style="color:#6B7280;padding:2px 12px 2px 0">Líneas</td><td>${lineas.map((l) => LINEAS[l] || l).join(", ") || "—"}</td></tr>` +
-    `<tr><td style="color:#6B7280;padding:2px 12px 2px 0">Origen</td><td>${r0.origen === "checklist" ? "Check-list diario" : "Durante la operación"}</td></tr></table>` +
-    `<table style="border-collapse:collapse;font-size:14px;width:100%">${filas}</table>` +
-    `<p style="margin:16px 0 0;font-size:12px;color:#6B7280">Aviso automático de <a href="${APP_URL}">BATAB Connect</a>.</p>`;
+    `<tr><td ${td}>Equipo</td><td><b>${escH(r0.activo?.nombre)}</b> (${escH(r0.activo?.codigo)})</td></tr>` +
+    `<tr><td ${td}>Reportó</td><td>${escH(r0.operador?.nombre)}</td></tr>` +
+    `<tr><td ${td}>Fecha</td><td>${fecha}</td></tr>` +
+    `<tr><td ${td}>Líneas</td><td>${lineas.map((l) => LINEAS[l] || l).join(", ") || "—"}</td></tr>` +
+    `<tr><td ${td}>Origen</td><td>${r0.origen === "checklist" ? "Check-list diario" : "Durante la operación"}</td></tr></table>` +
+    `<table style="border-collapse:collapse;font-size:14px;width:100%">${filas}</table>` + galeria +
+    `<p style="margin:16px 0 0"><a href="${APP_URL}" style="background:#f59e0b;color:#1a1204;padding:10px 16px;border-radius:6px;text-decoration:none;font-weight:600">Abrir bandeja de reportes</a></p>` +
+    pie(nombres, esPrueba);
 
-  let ok = false, detalle = "";
-  if (!correos.length) {
-    detalle = "Sin destinatarios configurados";
-  } else {
-    try {
-      const r = await fetch(CORREO_URL, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ guard: CORREO_GUARD, from: CORREO_FROM, to: correos, subject: `[BATAB Connect] ${titulo}`, titulo, html }),
-      });
-      const t = await r.text();
-      ok = r.ok; detalle = t.slice(0, 500);
-    } catch (e) { detalle = (e as Error).message; }
-  }
+  const { ok, detalle } = await enviarCorreo(correos, titulo, html);
   await sb.from("mt_avisos_log").insert(reps.map((r: any) => ({ reporte_id: r.id, canal: "correo", destinatarios: correos, ok, detalle })));
   if (ok) await sb.from("mt_reportes").update({ avisado_en: new Date().toISOString() }).in("id", ids);
 }
+
+// Aviso de equipo liberado por el taller.
+async function avisarLiberado(reporteId: string, quien: string, nota: string) {
+  const { data: r } = await sb.from("mt_reportes")
+    .select("id,folio,descripcion,lineas,operador_id,activo:mt_activos(codigo,nombre)").eq("id", reporteId).maybeSingle();
+  if (!r) return;
+  const rr: any = r;
+  const esPrueba = (await perfil(rr.operador_id)).es_prueba;
+  const { correos, nombres } = await destinatarios(rr.lineas || [], esPrueba);
+  const titulo = `${esPrueba ? "PRUEBA · " : ""}Equipo LIBERADO · ${rr.activo?.codigo}`;
+  const html =
+    `<p style="margin:0 0 12px"><b style="color:#15803D">El equipo quedó OPERATIVO y se puede volver a usar.</b></p>` +
+    `<table style="border-collapse:collapse;font-size:14px">` +
+    `<tr><td ${td}>Equipo</td><td><b>${escH(rr.activo?.nombre)}</b> (${escH(rr.activo?.codigo)})</td></tr>` +
+    `<tr><td ${td}>Reporte</td><td>#${rr.folio} · ${escH(rr.descripcion)}</td></tr>` +
+    `<tr><td ${td}>Liberó</td><td>${escH(quien)}</td></tr>` +
+    `<tr><td ${td}>Trabajo realizado</td><td>${escH(nota)}</td></tr></table>` + pie(nombres, esPrueba);
+  const { ok, detalle } = await enviarCorreo(correos, titulo, html);
+  await sb.from("mt_avisos_log").insert({ reporte_id: rr.id, canal: "correo", destinatarios: correos, ok, detalle: "liberado: " + detalle });
+}
+
 function enSegundoPlano(p: Promise<unknown>) {
   // deno-lint-ignore no-explicit-any
   const er = (globalThis as any).EdgeRuntime;
   if (er?.waitUntil) er.waitUntil(p.catch(() => {})); else p.catch(() => {});
 }
 
-const num = (v: unknown) =>(v === null || v === undefined || v === "" || isNaN(Number(v)) ? null : Number(v));
+const num = (v: unknown) => (v === null || v === undefined || v === "" || isNaN(Number(v)) ? null : Number(v));
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
@@ -142,14 +221,15 @@ Deno.serve(async (req) => {
       sb.from("operadores").update({ last_login: new Date().toISOString() }).eq("id", data.id).then(() => {});
       const operador = { id: data.id, codigo: data.codigo, nombre: data.nombre, rol: data.rol };
       const token = await firmar({ ...operador, exp: Date.now() + HORAS_TOKEN * 3600_000 });
-      return J({ ok: true, token, operador, sesion: await sesionAbierta(data.id) });
+      return J({ ok: true, token, operador, perfil: await perfil(data.id), sesion: await sesionAbierta(data.id) });
     }
 
     const yo = await leerToken(b.token);
     if (!yo) return J({ ok: false, codigo: "sesion_vencida", error: "Tu acceso venció. Entra de nuevo con tu PIN." }, 401);
 
     if (accion === "yo") {
-      return J({ ok: true, operador: { id: yo.id, codigo: yo.codigo, nombre: yo.nombre, rol: yo.rol }, sesion: await sesionAbierta(yo.id) });
+      return J({ ok: true, operador: { id: yo.id, codigo: yo.codigo, nombre: yo.nombre, rol: yo.rol },
+        perfil: await perfil(yo.id), sesion: await sesionAbierta(yo.id) });
     }
 
     if (accion === "ficha") {
@@ -171,7 +251,11 @@ Deno.serve(async (req) => {
         p_dispositivo: String(req.headers.get("user-agent") || "").slice(0, 200),
       });
       if (error) return J({ ok: false, error: error.message });
-      if (data?.reportes?.length) enSegundoPlano(avisar(data.reportes));
+      if (data?.reportes?.length) {
+        // las fotos del arranque se ligan al primer reporte; el correo las muestra todas
+        await guardarFotos(data.reportes[0], yo.id, b.fotos);
+        enSegundoPlano(avisar(data.reportes));
+      }
       return J({ ...data, sesion: data?.ok ? await sesionAbierta(yo.id) : null });
     }
 
@@ -184,8 +268,35 @@ Deno.serve(async (req) => {
         p_descripcion: String(b.descripcion || "").slice(0, 1000),
       });
       if (error) return J({ ok: false, error: error.message });
-      if (data?.ok && data.reporte_id) enSegundoPlano(avisar([data.reporte_id]));
-      return J({ ...data, sesion: await sesionAbierta(yo.id) });
+      let fotos = 0;
+      if (data?.ok && data.reporte_id) {
+        fotos = await guardarFotos(data.reporte_id, yo.id, b.fotos);
+        enSegundoPlano(avisar([data.reporte_id]));
+      }
+      return J({ ...data, fotos, sesion: await sesionAbierta(yo.id) });
+    }
+
+    if (accion === "bandeja") {
+      const estados = Array.isArray(b.estados) && b.estados.length ? b.estados.map(String) : null;
+      const { data, error } = await sb.rpc("mt_bandeja", { p_operador: yo.id, p_estados: estados });
+      if (error) return J({ ok: false, error: error.message });
+      if (!data?.ok) return J(data);
+      for (const r of data.reportes) r.fotos = await enlaces(r.fotos, 3600);
+      return J(data);
+    }
+
+    if (accion === "estado_reporte") {
+      const nota = String(b.nota || "").slice(0, 1000);
+      const { data, error } = await sb.rpc("mt_reporte_estado", {
+        p_operador: yo.id, p_reporte: String(b.reporte_id || ""), p_estado: String(b.estado || ""),
+        p_nota: nota, p_liberar: b.liberar === true,
+      });
+      if (error) return J({ ok: false, error: error.message });
+      if (data?.ok) {
+        await guardarFotos(String(b.reporte_id), yo.id, b.fotos, data.estado === "en_revision" ? "revision" : "reparacion");
+        if (data.equipo_liberado) enSegundoPlano(avisarLiberado(String(b.reporte_id), yo.nombre, nota));
+      }
+      return J(data);
     }
 
     if (accion === "iniciar") {

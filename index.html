@@ -87,6 +87,13 @@ input.pin{letter-spacing:10px;text-align:center;font-family:'JetBrains Mono',mon
 .hidden{display:none!important}
 .spinner{width:22px;height:22px;border:3px solid rgba(0,0,0,.25);border-top-color:currentColor;border-radius:50%;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
+.fotos{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:8px 0}
+.foto{position:relative;aspect-ratio:1/1;border-radius:10px;overflow:hidden;background:var(--panel2);border:1px solid var(--line)}
+.foto img{width:100%;height:100%;object-fit:cover;display:block;cursor:zoom-in}
+.foto button{position:absolute;top:4px;right:4px;width:26px;height:26px;border-radius:50%;border:0;background:rgba(0,0,0,.65);color:#fff;font-size:13px}
+.visor{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:50;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:16px}
+.visor img{max-width:100%;max-height:85vh;border-radius:8px}
+.visor span{color:#bbb;font-size:13px}
 footer{text-align:center;color:var(--ink3);font-size:11px;padding:24px 0 8px}
 </style>
 </head>
@@ -101,13 +108,13 @@ footer{text-align:center;color:var(--ink3);font-size:11px;padding:24px 0 8px}
 </div>
 
 <script>
-const VERSION = "0.2.0";
+const VERSION = "0.3.0";
 const NOMBRE_LINEA = { "1B": "Besser 1", "2B": "Besser 2", "3C": "Columbia" };
 const API = "https://szrcmvlgxxpmvgrfmxak.supabase.co/functions/v1/connect-api";
 document.getElementById("ver").textContent = VERSION;
 
 const S = {
-  token: lsGet("bc_token"), operador: JSON.parse(lsGet("bc_op") || "null"),
+  token: lsGet("bc_token"), operador: JSON.parse(lsGet("bc_op") || "null"), perfil: null, fotos: [],
   sesion: null, ficha: null, qr: null, resp: {}, lineas: [], obs: "", timer: null, stream: null,
 };
 function lsGet(k){ try{return localStorage.getItem(k)}catch(e){return null} }
@@ -138,7 +145,7 @@ async function iniciarApp() {
   pintarQuien();
   try {
     const r = await api("yo");
-    if (r.ok) { S.sesion = r.sesion; }
+    if (r.ok) { S.sesion = r.sesion; S.perfil = r.perfil; }
   } catch (e) { return; }
   if (S.qr) return abrirFicha(S.qr);
   vistaInicio();
@@ -182,7 +189,7 @@ async function login() {
   try {
     const r = await api("login", { codigo, pin });
     if (!r.ok) { document.getElementById("err").innerHTML = `<div class="alert bad">${esc(r.error)}</div>`; return ocupado(b, false, "Entrar"); }
-    S.token = r.token; S.operador = r.operador; S.sesion = r.sesion;
+    S.token = r.token; S.operador = r.operador; S.sesion = r.sesion; S.perfil = r.perfil;
     lsSet("bc_token", r.token); lsSet("bc_op", JSON.stringify(r.operador)); lsSet("bc_cod", codigo);
     pintarQuien();
     if (S.qr) return abrirFicha(S.qr);
@@ -209,13 +216,18 @@ function vistaInicio(aviso) {
         <button class="btn ghost" onclick="vistaReportar(null)">⚠ Reportar falla u observación</button>
       </div>` : `
       <h1>Hola, ${esc((S.operador?.nombre||"").split(" ")[0])}</h1>
+      ${S.perfil?.es_prueba ? `<span class="badge warn" style="margin-bottom:8px">Usuario de prueba · ${esc(puestos())}</span>` : ""}
       <p class="sub">Escanea el código QR del equipo que vas a operar.</p>`}
+    ${verBandeja() ? `<button class="btn ${s ? "ghost" : "primary"}" onclick="vistaBandeja()">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+      Bandeja de reportes <span id="nBand" class="badge bad hidden"></span></button>` : ""}
     <button class="btn ${s ? "ghost" : "primary big"}" onclick="vistaEscanear()">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><rect x="7" y="7" width="10" height="10" rx="1"/></svg>
       ${s ? "Escanear otro equipo" : "Escanear QR"}
     </button>
     <button class="btn ghost" onclick="vistaCodigo()">Escribir código del equipo</button>
   `);
+  if (verBandeja()) contarBandeja();
   if (s) {
     const t0 = new Date(s.inicio).getTime();
     const tick = () => { const d = Math.max(0, Date.now() - t0) / 1000;
@@ -280,7 +292,7 @@ function extraerQR(txt) {
 /* ---------------- Ficha ---------------- */
 async function abrirFicha(qr) {
   qr = String(qr || "").trim(); if (!qr) return;
-  S.qr = qr; S.resp = {}; S.lineas = []; S.obs = "";
+  S.qr = qr; S.resp = {}; S.lineas = []; S.obs = ""; S.fotos = [];
   $(`<div class="card" style="text-align:center"><div class="spinner" style="margin:20px auto;color:var(--accent)"></div>Buscando equipo…</div>`);
   let f;
   try { f = await api("ficha", { qr }); } catch (e) { return; }
@@ -413,11 +425,12 @@ function vistaArranque(msg) {
       <label for="obs">Observaciones para mantenimiento <span class="muted">(opcional)</span></label>
       <textarea id="obs" rows="3" placeholder="Ej. ruido en el eje trasero, la luz de servicio se prende…"
         oninput="S.obs=this.value" style="width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:12px;font:15px Inter,sans-serif">${esc(S.obs)}</textarea>
+      ${cajaFotos("Fotos de evidencia (opcional)")}
     </div>
     <button class="btn ${crit.length ? "danger" : "primary"} big" id="bIni" onclick="enviarInicio()">${crit.length ? "Reportar equipo no apto" : "Iniciar"}</button>
     <button class="btn ghost" onclick="${f.requiere_checklist ? "vistaChecklist()" : "abrirFicha(S.qr)"}">Regresar</button>
   `);
-  pintarLineas();
+  pintarLineas(); pintarFotos();
 }
 function toggleLinea(l) { S.lineas = S.lineas.includes(l) ? S.lineas.filter(x => x !== l) : [...S.lineas, l]; pintarLineas(); }
 function pintarLineas() { document.querySelectorAll(".lines button").forEach(b => b.classList.toggle("on", S.lineas.includes(b.id.slice(2)))); }
@@ -433,7 +446,8 @@ async function enviarInicio() {
   ocupado(b, true);
   const pos = await ubicacion();
   try {
-    const r = await api("iniciar", { qr: S.qr, lectura, respuestas: Object.values(S.resp), lineas: S.lineas, observaciones: S.obs, ...pos });
+    const r = await api("iniciar", { qr: S.qr, lectura, respuestas: Object.values(S.resp), lineas: S.lineas, observaciones: S.obs, fotos: S.fotos, ...pos });
+    if (r.ok || r.codigo === "no_apto") S.fotos = [];
     if (r.ok) {
       S.sesion = r.sesion; S.resp = {}; S.obs = ""; S.lineas = [];
       return vistaInicio(`<div class="alert ${r.checklist === "apto_observaciones" ? "warn" : "ok"}">${esc(r.mensaje)}</div>`);
@@ -448,7 +462,7 @@ async function enviarInicio() {
 let REP = { tipo: "falla", opera: true };
 function vistaReportar(qr) {
   clearInterval(S.timer);
-  REP = { tipo: "falla", opera: true, qr };
+  REP = { tipo: "falla", opera: true, qr }; S.fotos = [];
   const eq = qr ? S.ficha?.activo : S.sesion?.activo;
   $(`
     <h1>Reportar</h1>
@@ -467,12 +481,13 @@ function vistaReportar(qr) {
       <label for="desc">Describe qué pasa</label>
       <textarea id="desc" rows="4" placeholder="Qué notaste, dónde, desde cuándo…"
         style="width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:12px;font:15px Inter,sans-serif"></textarea>
+      ${cajaFotos("Fotos de la falla, la pieza o la placa")}
       <div id="repErr"></div>
     </div>
     <button class="btn primary big" id="bRep" onclick="enviarReporte()">Enviar reporte</button>
     <button class="btn ghost" onclick="${qr ? "abrirFicha(S.qr)" : "vistaInicio()"}">Regresar</button>
   `);
-  pintarRep();
+  pintarRep(); pintarFotos();
 }
 function repTipo(t) { REP.tipo = t; pintarRep(); }
 function repOpera(v) { REP.opera = v; pintarRep(); }
@@ -491,11 +506,166 @@ async function enviarReporte() {
   if (!descripcion) { document.getElementById("repErr").innerHTML = `<div class="alert bad">Describe qué pasa con el equipo.</div>`; return; }
   ocupado(b, true);
   try {
-    const r = await api("reportar", { qr: REP.qr, tipo: REP.tipo, puede_operar: REP.opera, descripcion });
+    const r = await api("reportar", { qr: REP.qr, tipo: REP.tipo, puede_operar: REP.opera, descripcion, fotos: S.fotos });
     if (!r.ok) { document.getElementById("repErr").innerHTML = `<div class="alert bad">${esc(r.error)}</div>`; return ocupado(b, false, txt); }
-    S.sesion = r.sesion;
-    vistaInicio(`<div class="alert ${r.equipo_detenido ? "bad" : "ok"}"><b>Reporte #${r.folio} enviado.</b><br>
+    S.sesion = r.sesion; S.fotos = [];
+    vistaInicio(`<div class="alert ${r.equipo_detenido ? "bad" : "ok"}"><b>Reporte #${r.folio} enviado${r.fotos ? ` con ${r.fotos} foto${r.fotos > 1 ? "s" : ""}` : ""}.</b><br>
       ${r.equipo_detenido ? "El equipo quedó NO APTO. Mantenimiento y tu supervisor recibirán el aviso." : "Mantenimiento y tu supervisor recibirán el aviso."}</div>`);
+  } catch (e) { ocupado(b, false, txt); }
+}
+
+/* ---------------- Perfil ---------------- */
+const NOMBRE_PUESTO = { operador: "Operador", mantenimiento: "Taller de mantenimiento", supervisor_area: "Supervisor de área", almacen: "Almacén", director: "Dirección" };
+const roles = () => S.perfil?.roles || ["operador"];
+const tiene = (...r) => roles().some(x => r.includes(x));
+const puestos = () => roles().map(r => NOMBRE_PUESTO[r] || r).join(", ");
+const verBandeja = () => tiene("mantenimiento", "supervisor_area", "director");
+const atiende = () => tiene("mantenimiento", "director");
+
+/* ---------------- Fotos ---------------- */
+const MAX_FOTOS = 4;
+function cajaFotos(titulo) {
+  return `<label>${esc(titulo)} <span class="muted">(hasta ${MAX_FOTOS})</span></label>
+    <div id="fotos" class="fotos"></div>
+    <input id="fileFoto" type="file" accept="image/*" capture="environment" class="hidden" onchange="agregarFotos(this.files);this.value=''">
+    <input id="fileGal" type="file" accept="image/*" multiple class="hidden" onchange="agregarFotos(this.files);this.value=''">
+    <div class="seg" id="fotoBtns">
+      <button type="button" onclick="document.getElementById('fileFoto').click()">📷 Tomar foto</button>
+      <button type="button" onclick="document.getElementById('fileGal').click()">🖼 De la galería</button>
+    </div>`;
+}
+function pintarFotos() {
+  const c = document.getElementById("fotos"); if (!c) return;
+  c.innerHTML = S.fotos.map((f, i) => `<div class="foto"><img src="${f}" alt=""><button onclick="quitarFoto(${i})" aria-label="Quitar">✕</button></div>`).join("");
+  const b = document.getElementById("fotoBtns"); if (b) b.classList.toggle("hidden", S.fotos.length >= MAX_FOTOS);
+}
+function quitarFoto(i) { S.fotos.splice(i, 1); pintarFotos(); }
+async function agregarFotos(files) {
+  for (const f of Array.from(files || [])) {
+    if (S.fotos.length >= MAX_FOTOS) break;
+    try { S.fotos.push(await comprimir(f)); } catch (e) {}
+    pintarFotos();
+  }
+}
+// Reduce la foto a máx. 1280 px y JPEG para que suba rápido con poca señal.
+function comprimir(file) {
+  return new Promise((res, rej) => {
+    const url = URL.createObjectURL(file), img = new Image();
+    img.onload = () => {
+      const k = Math.min(1, 1280 / Math.max(img.width, img.height));
+      const c = document.createElement("canvas"); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url); res(c.toDataURL("image/jpeg", 0.72));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); rej(new Error("No se pudo leer la foto")); };
+    img.src = url;
+  });
+}
+function verFoto(u) {
+  const d = document.createElement("div"); d.className = "visor"; d.onclick = () => d.remove();
+  d.innerHTML = `<img src="${u}" alt=""><span>Toca para cerrar</span>`; document.body.appendChild(d);
+}
+
+/* ---------------- Bandeja de reportes (taller, supervisor, dirección) ---------------- */
+const B = { filtro: "abiertos", datos: [] };
+const ESTADO_REP = { abierto: ["bad", "Abierto"], en_revision: ["warn", "En revisión"], atendido: ["ok", "Atendido"], cerrado: ["info", "Cerrado"] };
+const ESTADO_EQ = { operativo: ["ok", "Operativo"], no_apto: ["bad", "No apto"], en_reparacion: ["warn", "En reparación"], fuera_servicio: ["bad", "Fuera de servicio"] };
+async function contarBandeja() {
+  try {
+    const r = await api("bandeja", {});
+    const n = (r.reportes || []).filter(x => x.estado === "abierto").length;
+    const el = document.getElementById("nBand"); if (el && n) { el.textContent = n; el.classList.remove("hidden"); }
+  } catch (e) {}
+}
+async function vistaBandeja(filtro) {
+  clearInterval(S.timer);
+  if (filtro) B.filtro = filtro;
+  $(`<h1>Bandeja de reportes</h1><p class="sub">${esc(puestos())}</p>
+     <div class="card" style="text-align:center"><div class="spinner" style="margin:12px auto;color:var(--accent)"></div>Cargando…</div>`);
+  let r;
+  try { r = await api("bandeja", { estados: B.filtro === "abiertos" ? ["abierto", "en_revision"] : ["atendido", "cerrado"] }); } catch (e) { return; }
+  if (!r.ok) return vistaInicio(`<div class="alert bad">${esc(r.error)}</div>`);
+  B.datos = r.reportes;
+  $(`
+    <h1>Bandeja de reportes</h1>
+    <p class="sub">${esc(puestos())}${S.perfil?.es_prueba ? " · prueba" : ""}</p>
+    <div class="seg" style="margin-bottom:12px">
+      <button class="${B.filtro === "abiertos" ? "on bad" : ""}" onclick="vistaBandeja('abiertos')">Pendientes</button>
+      <button class="${B.filtro === "atendidos" ? "on ok" : ""}" onclick="vistaBandeja('atendidos')">Atendidos</button>
+    </div>
+    ${B.datos.length ? B.datos.map((x, i) => tarjetaReporte(x, i)).join("") : `<div class="card muted" style="text-align:center">No hay reportes ${B.filtro === "abiertos" ? "pendientes" : "atendidos"}.</div>`}
+    <button class="btn ghost" onclick="vistaInicio()">Regresar</button>
+  `);
+}
+function tarjetaReporte(x, i) {
+  const [ce, te] = ESTADO_REP[x.estado] || ["info", x.estado];
+  const [cq, tq] = ESTADO_EQ[x.equipo.estado] || ["info", x.equipo.estado];
+  const fecha = new Date(x.fecha).toLocaleString("es-MX", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+  return `<div class="item ${x.critico || !x.puede_operar ? "falla" : ""}" style="padding:14px">
+    <div style="display:flex;justify-content:space-between;gap:8px;align-items:center">
+      <b class="mono">#${x.folio} · ${esc(x.equipo.codigo)}</b><span class="badge ${ce}">${te}</span>
+    </div>
+    <div class="muted" style="margin:2px 0 8px">${esc(x.equipo.nombre)} · <span class="badge ${cq}" style="padding:1px 8px">${tq}</span></div>
+    <div style="font-size:15px">${x.critico || !x.puede_operar ? '<b style="color:var(--bad)">Detiene el equipo · </b>' : ""}${x.tipo === "falla" ? "Falla" : "Observación"}: ${esc(x.descripcion)}</div>
+    ${x.fotos.length ? `<div class="fotos" style="margin-top:10px">${x.fotos.map(u => `<div class="foto"><img src="${u}" alt="" onclick="verFoto('${u}')"></div>`).join("")}</div>` : ""}
+    <div class="muted" style="margin-top:8px">${esc(x.operador)} · ${fecha}${x.lineas?.length ? " · " + x.lineas.map(l => NOMBRE_LINEA[l] || l).join(", ") : ""}${x.es_prueba ? " · prueba" : ""}</div>
+    ${x.seguimiento.length ? `<div style="margin-top:10px;border-top:1px solid var(--line);padding-top:8px">${x.seguimiento.map(s =>
+      `<div class="muted" style="margin-bottom:4px"><b style="color:var(--ink2)">${esc((ESTADO_REP[s.estado] || [, s.estado])[1])}</b> · ${esc(s.por)} · ${new Date(s.fecha).toLocaleString("es-MX", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}${s.nota ? `<br>${esc(s.nota)}` : ""}${s.libero ? '<br><span style="color:var(--ok)">Liberó el equipo</span>' : ""}</div>`).join("")}</div>` : ""}
+    ${atiende() && ["abierto", "en_revision"].includes(x.estado) ? `<button class="btn primary" style="margin-top:10px" onclick="vistaAtender(${i})">Atender</button>` : ""}
+  </div>`;
+}
+let AT = { estado: "en_revision", liberar: false, i: 0 };
+function vistaAtender(i) {
+  const x = B.datos[i]; S.fotos = [];
+  const detenido = ["no_apto", "en_reparacion"].includes(x.equipo.estado);
+  AT = { estado: x.estado === "abierto" ? "en_revision" : "atendido", liberar: false, i };
+  $(`
+    <h1>Atender reporte #${x.folio}</h1>
+    <p class="sub">${esc(x.equipo.nombre)} · <span class="mono">${esc(x.equipo.codigo)}</span></p>
+    <div class="card">
+      <div style="font-size:15px">${esc(x.descripcion)}</div>
+      ${x.fotos.length ? `<div class="fotos" style="margin-top:10px">${x.fotos.map(u => `<div class="foto"><img src="${u}" alt="" onclick="verFoto('${u}')"></div>`).join("")}</div>` : ""}
+    </div>
+    <div class="card">
+      <label>Nuevo estado</label>
+      <div class="seg">
+        <button id="eRev" onclick="atEstado('en_revision')">En revisión</button>
+        <button id="eAte" onclick="atEstado('atendido')">Atendido</button>
+      </div>
+      <label for="nota">Diagnóstico / trabajo realizado</label>
+      <textarea id="nota" rows="4" placeholder="Qué se encontró, qué se cambió, refacciones usadas…"
+        style="width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:12px;font:15px Inter,sans-serif"></textarea>
+      ${detenido ? `<label style="display:flex;gap:10px;align-items:center;margin-top:14px;font-size:15px;color:var(--ink)">
+        <input type="checkbox" id="lib" style="width:22px;height:22px" onchange="AT.liberar=this.checked;atPintar()"> Liberar el equipo (queda operativo)</label>` : ""}
+      ${cajaFotos("Fotos de la revisión o reparación")}
+      <div id="atErr"></div>
+    </div>
+    <button class="btn primary big" id="bAt" onclick="enviarAtencion()">Guardar</button>
+    <button class="btn ghost" onclick="vistaBandeja()">Regresar</button>
+  `);
+  atPintar(); pintarFotos();
+}
+function atEstado(e) { AT.estado = e; atPintar(); }
+function atPintar() {
+  document.getElementById("eRev").className = AT.estado === "en_revision" ? "on bad" : "";
+  document.getElementById("eAte").className = AT.estado === "atendido" ? "on ok" : "";
+  const b = document.getElementById("bAt");
+  b.textContent = AT.liberar ? "Guardar y liberar equipo" : "Guardar";
+  b.className = "btn big " + (AT.liberar ? "danger" : "primary");
+}
+async function enviarAtencion() {
+  const x = B.datos[AT.i], b = document.getElementById("bAt"), txt = b.textContent;
+  const nota = document.getElementById("nota").value.trim();
+  if (AT.estado === "atendido" && !nota) { document.getElementById("atErr").innerHTML = `<div class="alert bad">Escribe qué se hizo para atenderlo.</div>`; return; }
+  ocupado(b, true);
+  try {
+    const r = await api("estado_reporte", { reporte_id: x.id, estado: AT.estado, nota, liberar: AT.liberar, fotos: S.fotos });
+    if (!r.ok) { document.getElementById("atErr").innerHTML = `<div class="alert bad">${esc(r.error)}</div>`; return ocupado(b, false, txt); }
+    S.fotos = [];
+    await vistaBandeja();
+    const aviso = document.createElement("div");
+    aviso.className = "alert ok"; aviso.innerHTML = `<b>Reporte #${r.folio} actualizado.</b>${r.equipo_liberado ? "<br>El equipo quedó operativo y se avisó al supervisor de área." : ""}`;
+    document.getElementById("app").prepend(aviso);
   } catch (e) { ocupado(b, false, txt); }
 }
 
