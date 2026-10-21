@@ -101,13 +101,14 @@ footer{text-align:center;color:var(--ink3);font-size:11px;padding:24px 0 8px}
 </div>
 
 <script>
-const VERSION = "0.1.1";
+const VERSION = "0.2.0";
+const NOMBRE_LINEA = { "1B": "Besser 1", "2B": "Besser 2", "3C": "Columbia" };
 const API = "https://szrcmvlgxxpmvgrfmxak.supabase.co/functions/v1/connect-api";
 document.getElementById("ver").textContent = VERSION;
 
 const S = {
   token: lsGet("bc_token"), operador: JSON.parse(lsGet("bc_op") || "null"),
-  sesion: null, ficha: null, qr: null, resp: {}, linea: null, timer: null, stream: null,
+  sesion: null, ficha: null, qr: null, resp: {}, lineas: [], obs: "", timer: null, stream: null,
 };
 function lsGet(k){ try{return localStorage.getItem(k)}catch(e){return null} }
 function lsSet(k,v){ try{ v===null?localStorage.removeItem(k):localStorage.setItem(k,v) }catch(e){} }
@@ -203,8 +204,9 @@ function vistaInicio(aviso) {
         <div class="timer" id="tmr">00:00:00</div>
         <div class="row"><span>Inicio</span><span>${fmtHora(s.inicio)}</span></div>
         <div class="row"><span>Lectura inicial</span><span class="mono">${fmtNum(s.lectura_inicio)}</span></div>
-        ${s.linea_atendida ? `<div class="row"><span>Línea atendida</span><span>${esc(s.linea_atendida)}</span></div>` : ""}
+        ${(s.lineas_atendidas?.length || s.linea_atendida) ? `<div class="row"><span>Da servicio a</span><span>${(s.lineas_atendidas || [s.linea_atendida]).map(l => esc(NOMBRE_LINEA[l] || l)).join(", ")}</span></div>` : ""}
         <button class="btn danger big" onclick="vistaCerrar()">Terminar uso</button>
+        <button class="btn ghost" onclick="vistaReportar(null)">⚠ Reportar falla u observación</button>
       </div>` : `
       <h1>Hola, ${esc((S.operador?.nombre||"").split(" ")[0])}</h1>
       <p class="sub">Escanea el código QR del equipo que vas a operar.</p>`}
@@ -278,7 +280,7 @@ function extraerQR(txt) {
 /* ---------------- Ficha ---------------- */
 async function abrirFicha(qr) {
   qr = String(qr || "").trim(); if (!qr) return;
-  S.qr = qr; S.resp = {}; S.linea = null;
+  S.qr = qr; S.resp = {}; S.lineas = []; S.obs = "";
   $(`<div class="card" style="text-align:center"><div class="spinner" style="margin:20px auto;color:var(--accent)"></div>Buscando equipo…</div>`);
   let f;
   try { f = await api("ficha", { qr }); } catch (e) { return; }
@@ -315,6 +317,17 @@ async function abrirFicha(qr) {
         ${f.requiere_checklist ? "Iniciar · check-list diario" : "Iniciar uso"}</button>
       ${!f.requiere_checklist ? `<p class="muted" style="text-align:center">El check-list de este equipo ya se hizo en este turno.</p>` : ""}` : ""}
     ${ses && ses.es_mia ? `<button class="btn danger big" onclick="vistaCerrar()">Terminar uso</button>` : ""}
+    <button class="btn ghost" onclick="vistaReportar(S.qr)">⚠ Reportar falla u observación</button>
+
+    ${(f.reportes_abiertos || []).length ? `<h2>Reportes abiertos</h2>
+      ${f.reportes_abiertos.map(r => `<div class="item ${r.critico ? "falla" : ""}">
+        <div style="display:flex;justify-content:space-between;gap:8px;font-size:12px;color:var(--ink3)">
+          <span>#${r.folio} · ${new Date(r.fecha).toLocaleString("es-MX",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"})}</span>
+          <span class="badge ${r.critico ? "bad" : (r.tipo === "falla" ? "warn" : "info")}">${r.critico ? "Crítico" : (r.tipo === "falla" ? "Falla" : "Observación")}</span>
+        </div>
+        <div style="margin-top:6px">${esc(r.descripcion)}</div>
+        <div class="muted" style="margin-top:4px">${esc(r.operador)}</div>
+      </div>`).join("")}` : ""}
 
     <h2>Componentes</h2>
     <div class="card">
@@ -393,16 +406,21 @@ function vistaArranque(msg) {
     <div class="card">
       <label for="lec">${a.medidor === "km" ? "Odómetro actual (km)" : "Horómetro actual (horas)"}</label>
       <input id="lec" type="number" inputmode="decimal" step="0.1" placeholder="${a.lectura_actual != null ? "Último: " + fmtNum(a.lectura_actual) : "Ej. 1250.5"}">
-      ${f.lineas?.length > 1 ? `
-        <label>¿A qué línea vas a dar servicio?</label>
-        <div class="lines">${f.lineas.map(l => `<button id="ln${l}" onclick="elegirLinea('${l}')">${({"1B":"Besser 1","2B":"Besser 2","3C":"Columbia"})[l] || l}</button>`).join("")}</div>` : ""}
+      ${(f.lineas_detalle || []).length ? `
+        <label>¿A qué líneas vas a dar servicio? <span class="muted">(puedes elegir varias)</span></label>
+        <div class="lines">${f.lineas_detalle.map(l => `<button id="ln${l.linea}" ${l.disponible ? `onclick="toggleLinea('${l.linea}')"` : "disabled"}
+            style="${l.disponible ? "" : "opacity:.45"}">${esc(NOMBRE_LINEA[l.linea] || l.linea)}${l.disponible ? "" : `<br><small style="font-weight:400">${esc(l.nota || "No disponible")}</small>`}</button>`).join("")}</div>` : ""}
+      <label for="obs">Observaciones para mantenimiento <span class="muted">(opcional)</span></label>
+      <textarea id="obs" rows="3" placeholder="Ej. ruido en el eje trasero, la luz de servicio se prende…"
+        oninput="S.obs=this.value" style="width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:12px;font:15px Inter,sans-serif">${esc(S.obs)}</textarea>
     </div>
     <button class="btn ${crit.length ? "danger" : "primary"} big" id="bIni" onclick="enviarInicio()">${crit.length ? "Reportar equipo no apto" : "Iniciar"}</button>
     <button class="btn ghost" onclick="${f.requiere_checklist ? "vistaChecklist()" : "abrirFicha(S.qr)"}">Regresar</button>
   `);
-  if (S.linea) elegirLinea(S.linea);
+  pintarLineas();
 }
-function elegirLinea(l) { S.linea = l; document.querySelectorAll(".lines button").forEach(b => b.classList.toggle("on", b.id === "ln"+l)); }
+function toggleLinea(l) { S.lineas = S.lineas.includes(l) ? S.lineas.filter(x => x !== l) : [...S.lineas, l]; pintarLineas(); }
+function pintarLineas() { document.querySelectorAll(".lines button").forEach(b => b.classList.toggle("on", S.lineas.includes(b.id.slice(2)))); }
 function ubicacion() {
   return new Promise(res => {
     if (!navigator.geolocation) return res({});
@@ -415,14 +433,69 @@ async function enviarInicio() {
   ocupado(b, true);
   const pos = await ubicacion();
   try {
-    const r = await api("iniciar", { qr: S.qr, lectura, respuestas: Object.values(S.resp), linea: S.linea, ...pos });
+    const r = await api("iniciar", { qr: S.qr, lectura, respuestas: Object.values(S.resp), lineas: S.lineas, observaciones: S.obs, ...pos });
     if (r.ok) {
-      S.sesion = r.sesion; S.resp = {};
+      S.sesion = r.sesion; S.resp = {}; S.obs = ""; S.lineas = [];
       return vistaInicio(`<div class="alert ${r.checklist === "apto_observaciones" ? "warn" : "ok"}">${esc(r.mensaje)}</div>`);
     }
     if (r.codigo === "no_apto") { S.resp = {}; return vistaInicio(`<div class="alert bad">${esc(r.error)}</div>`); }
     if (r.codigo === "checklist_incompleto") { return vistaChecklist(); }
     vistaArranque(r.error);
+  } catch (e) { ocupado(b, false, txt); }
+}
+
+/* ---------------- Reportar falla u observación ---------------- */
+let REP = { tipo: "falla", opera: true };
+function vistaReportar(qr) {
+  clearInterval(S.timer);
+  REP = { tipo: "falla", opera: true, qr };
+  const eq = qr ? S.ficha?.activo : S.sesion?.activo;
+  $(`
+    <h1>Reportar</h1>
+    <p class="sub">${esc(eq?.nombre || "")} · <span class="mono">${esc(eq?.codigo || "")}</span></p>
+    <div class="card">
+      <label>¿Qué quieres reportar?</label>
+      <div class="seg">
+        <button id="tFalla" onclick="repTipo('falla')">Falla</button>
+        <button id="tObs" onclick="repTipo('observacion')">Observación</button>
+      </div>
+      <label>¿Se puede seguir operando?</label>
+      <div class="seg">
+        <button id="oSi" onclick="repOpera(true)">Sí, sigue operando</button>
+        <button id="oNo" onclick="repOpera(false)">No, hay que detenerlo</button>
+      </div>
+      <label for="desc">Describe qué pasa</label>
+      <textarea id="desc" rows="4" placeholder="Qué notaste, dónde, desde cuándo…"
+        style="width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:12px;font:15px Inter,sans-serif"></textarea>
+      <div id="repErr"></div>
+    </div>
+    <button class="btn primary big" id="bRep" onclick="enviarReporte()">Enviar reporte</button>
+    <button class="btn ghost" onclick="${qr ? "abrirFicha(S.qr)" : "vistaInicio()"}">Regresar</button>
+  `);
+  pintarRep();
+}
+function repTipo(t) { REP.tipo = t; pintarRep(); }
+function repOpera(v) { REP.opera = v; pintarRep(); }
+function pintarRep() {
+  document.getElementById("tFalla").className = REP.tipo === "falla" ? "on bad" : "";
+  document.getElementById("tObs").className = REP.tipo === "observacion" ? "on ok" : "";
+  document.getElementById("oSi").className = REP.opera ? "on ok" : "";
+  document.getElementById("oNo").className = REP.opera ? "" : "on bad";
+  const b = document.getElementById("bRep");
+  b.className = "btn big " + (REP.opera ? "primary" : "danger");
+  b.textContent = REP.opera ? "Enviar reporte" : "Detener equipo y reportar";
+}
+async function enviarReporte() {
+  const b = document.getElementById("bRep"), txt = b.textContent;
+  const descripcion = document.getElementById("desc").value.trim();
+  if (!descripcion) { document.getElementById("repErr").innerHTML = `<div class="alert bad">Describe qué pasa con el equipo.</div>`; return; }
+  ocupado(b, true);
+  try {
+    const r = await api("reportar", { qr: REP.qr, tipo: REP.tipo, puede_operar: REP.opera, descripcion });
+    if (!r.ok) { document.getElementById("repErr").innerHTML = `<div class="alert bad">${esc(r.error)}</div>`; return ocupado(b, false, txt); }
+    S.sesion = r.sesion;
+    vistaInicio(`<div class="alert ${r.equipo_detenido ? "bad" : "ok"}"><b>Reporte #${r.folio} enviado.</b><br>
+      ${r.equipo_detenido ? "El equipo quedó NO APTO. Mantenimiento y tu supervisor recibirán el aviso." : "Mantenimiento y tu supervisor recibirán el aviso."}</div>`);
   } catch (e) { ocupado(b, false, txt); }
 }
 

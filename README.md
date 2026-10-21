@@ -26,6 +26,7 @@ y las reglas (autorización, check-list, lecturas) se aplican en la base de dato
 | v2 funciones | 2026-10-20 | `mt_ficha`, `mt_iniciar_uso`, `mt_cerrar_uso` | `db/reversa/v2_reversa.sql` |
 | app 0.1.0 | 2026-10-20 | Entrar con PIN, escanear QR, ficha, check-list, iniciar y terminar uso | Revertir el merge en GitHub |
 | app 0.1.1 | 2026-10-20 | Ícono oficial (engrane con QR) y opción de agregar a la pantalla de inicio | Revertir el merge en GitHub |
+| v3 + app 0.2.0 | 2026-10-20 | Observaciones del operador, botón de reportar en cualquier momento, varias líneas por sesión (Besser 2 en reconfiguración), avisos por correo a mantenimiento y supervisor de área | `db/reversa/v3_reversa.sql` + revertir el merge |
 
 ## QR de los equipos
 
