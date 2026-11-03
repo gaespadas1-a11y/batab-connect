@@ -108,7 +108,7 @@ footer{text-align:center;color:var(--ink3);font-size:11px;padding:24px 0 8px}
 </div>
 
 <script>
-const VERSION = "0.3.0";
+const VERSION = "0.3.1";
 const NOMBRE_LINEA = { "1B": "Besser 1", "2B": "Besser 2", "3C": "Columbia" };
 const API = "https://szrcmvlgxxpmvgrfmxak.supabase.co/functions/v1/connect-api";
 document.getElementById("ver").textContent = VERSION;
@@ -313,7 +313,7 @@ async function abrirFicha(qr) {
         <div class="row"><span>Marca / modelo</span><span>${esc([a.marca, a.modelo].filter(Boolean).join(" "))}</span></div>
         <div class="row"><span>No. de serie</span><span class="mono">${esc(a.num_serie || "—")}</span></div>
         ${esp.pin ? `<div class="row"><span>PIN</span><span class="mono">${esc(esp.pin)}</span></div>` : ""}
-        <div class="row"><span>${a.medidor === "km" ? "Odómetro" : "Horómetro"}</span><span class="mono">${fmtNum(a.lectura_actual)}</span></div>
+        ${a.medidor === "ninguno" ? "" : `<div class="row"><span>${a.medidor === "km" ? "Odómetro" : "Horómetro"}</span><span class="mono">${fmtNum(a.lectura_actual)}</span></div>`}
         <div class="row"><span>Ubicación</span><span>${esc(a.ubicacion || "—")}</span></div>
         ${f.lineas?.length ? `<div class="row"><span>Da servicio a</span><span>${f.lineas.map(esc).join(", ")}</span></div>` : ""}
       </div>
@@ -416,8 +416,8 @@ function vistaArranque(msg) {
       : fallas.length ? `<div class="alert warn">${fallas.length} observación(es). Podrás operar y se avisará a mantenimiento.</div>` : ""}
     ${msg ? `<div class="alert bad">${esc(msg)}</div>` : ""}
     <div class="card">
-      <label for="lec">${a.medidor === "km" ? "Odómetro actual (km)" : "Horómetro actual (horas)"}</label>
-      <input id="lec" type="number" inputmode="decimal" step="0.1" placeholder="${a.lectura_actual != null ? "Último: " + fmtNum(a.lectura_actual) : "Ej. 1250.5"}">
+      ${a.medidor === "ninguno" ? `<input id="lec" type="hidden" value="">` : `<label for="lec">${a.medidor === "km" ? "Odómetro actual (km)" : "Horómetro actual (horas)"}</label>
+      <input id="lec" type="number" inputmode="decimal" step="0.1" placeholder="${a.lectura_actual != null ? "Último: " + fmtNum(a.lectura_actual) : "Ej. 1250.5"}">`}
       ${(f.lineas_detalle || []).length ? `
         <label>¿A qué líneas vas a dar servicio? <span class="muted">(puedes elegir varias)</span></label>
         <div class="lines">${f.lineas_detalle.map(l => `<button id="ln${l.linea}" ${l.disponible ? `onclick="toggleLinea('${l.linea}')"` : "disabled"}
@@ -673,16 +673,16 @@ async function enviarAtencion() {
 function vistaCerrar(msg) {
   clearInterval(S.timer);
   const s = S.sesion;
-  const km = s.activo?.tipo?.medidor === "km";
+  const km = s.activo?.tipo?.medidor === "km", sinMedidor = s.activo?.tipo?.medidor === "ninguno";
   $(`
     <h1>Terminar uso</h1>
     <p class="sub">${esc(s.activo?.nombre)} · <span class="mono">${esc(s.activo?.codigo)}</span></p>
     ${msg ? `<div class="alert bad">${esc(msg)}</div>` : ""}
     <div class="card">
       <div class="row"><span>Inicio</span><span>${fmtHora(s.inicio)}</span></div>
-      <div class="row"><span>Lectura inicial</span><span class="mono">${fmtNum(s.lectura_inicio)}</span></div>
+      ${sinMedidor ? `<input id="lecf" type="hidden" value=""><p class="muted">Este equipo no lleva horómetro: el tiempo de uso se toma de la sesión.</p>` : `<div class="row"><span>Lectura inicial</span><span class="mono">${fmtNum(s.lectura_inicio)}</span></div>
       <label for="lecf">${km ? "Odómetro final (km)" : "Horómetro final (horas)"}</label>
-      <input id="lecf" type="number" inputmode="decimal" step="0.1" placeholder="Igual o mayor a ${fmtNum(s.lectura_inicio)}">
+      <input id="lecf" type="number" inputmode="decimal" step="0.1" placeholder="Igual o mayor a ${fmtNum(s.lectura_inicio)}">`}
     </div>
     <button class="btn danger big" id="bFin" onclick="enviarCierre()">Terminar</button>
     <button class="btn ghost" onclick="vistaInicio()">Regresar</button>

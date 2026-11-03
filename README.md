@@ -31,6 +31,7 @@ y las reglas (autorización, check-list, lecturas) se aplican en la base de dato
 | v5c | 2026-11-03 | Plataforma de block (BAT-EM-PLT01); grúa Palfinger y plataforma registradas como propiedad de BATAB con BATAB como beneficiario preferente del seguro | `db/reversa/v5c_reversa.sql` |
 | v5e | 2026-11-03 | Camión Freightliner M2 (BAT-EM-CAM03) con grúa Palfinger PK23500 (BAT-EM-GRU03) | ver encabezado de `v5e_freightliner_pk23500.sql` |
 | v6 + api 0.3.1 | 2026-11-03 | Avisos separados: camiones, grúas y plataforma avisan al supervisor de logística y distribución (Erick Pérez); el cargador y las líneas siguen avisando a producción; el taller recibe todo | `db/reversa/v6_reversa.sql` + desplegar connect-api 0.3.0 |
+| v7 + app 0.3.1 | 2026-11-03 | Check-list diario de grúas (13 puntos del manual Palfinger, 10 críticos); grúas sin horómetro (la app oculta la lectura); autorización de prueba de GEHO en la PK23500 | `db/reversa/v7_reversa.sql` + revertir el merge |
 | v3 + app 0.2.0 | 2026-10-20 | Observaciones del operador, botón de reportar en cualquier momento, varias líneas por sesión (Besser 2 en reconfiguración), avisos por correo a mantenimiento y supervisor de área | `db/reversa/v3_reversa.sql` + revertir el merge |
 
 ## QR de los equipos
