@@ -36,6 +36,8 @@ y las reglas (autorización, check-list, lecturas) se aplican en la base de dato
 | v9 | 2026-11-03 | Alerta diaria (8:00) de licencias de conducir por vencer a logística de Fábrica Teapa y del CEDIS: a 60, 30, 15, 7, 1 y 0 días, y cada lunes si está vencida | `db/reversa/v9_reversa.sql` |
 | v9b | 2026-11-03 | Alerta de licencias todos los días desde 30 días antes ("Faltan 30 días…", "Faltan 29 días…") y diaria mientras esté vencida | volver a aplicar la función de v9 |
 | v10 | 2026-11-03 | Plataforma del Freightliner M2 (BAT-EM-PLT02), incluida en la compra a Madisa, sin número de serie; hoja de placas QR del M2 para imprimir | ver encabezado de `v10_plataforma_m2.sql` |
+| v11 | 2026-11-03 | Check-list diario de camiones (26 puntos: manual Freightliner M2 y NOM-068) y de plataformas (5 puntos) | `db/reversa/v11_reversa.sql` |
+| v12 | 2026-11-03 | Al iniciar un camión, el mismo check-list incluye la grúa y la plataforma montadas; cada equipo guarda su check-list y reportes; una falla crítica de la grúa la deja no apta sin detener el camión | volver a aplicar mt_ficha (v5b) y mt_iniciar_uso_v2 (v3) |
 | v3 + app 0.2.0 | 2026-10-20 | Observaciones del operador, botón de reportar en cualquier momento, varias líneas por sesión (Besser 2 en reconfiguración), avisos por correo a mantenimiento y supervisor de área | `db/reversa/v3_reversa.sql` + revertir el merge |
 
 ## QR de los equipos
