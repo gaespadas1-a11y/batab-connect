@@ -38,6 +38,7 @@ y las reglas (autorización, check-list, lecturas) se aplican en la base de dato
 | v10 | 2026-11-03 | Plataforma del Freightliner M2 (BAT-EM-PLT02), incluida en la compra a Madisa, sin número de serie; hoja de placas QR del M2 para imprimir | ver encabezado de `v10_plataforma_m2.sql` |
 | v11 | 2026-11-03 | Check-list diario de camiones (26 puntos: manual Freightliner M2 y NOM-068) y de plataformas (5 puntos) | `db/reversa/v11_reversa.sql` |
 | v12 | 2026-11-03 | Al iniciar un camión, el mismo check-list incluye la grúa y la plataforma montadas; cada equipo guarda su check-list y reportes; una falla crítica de la grúa la deja no apta sin detener el camión | volver a aplicar mt_ficha (v5b) y mt_iniciar_uso_v2 (v3) |
+| v13 | 2026-11-03 | Check-list versión 2: equipo de emergencia por separado, llanta de refacción, gato y llave, herramienta básica; trinquetes de amarre de 4" en la plataforma | ver encabezado de `v13_checklist_v2_equipo_emergencia.sql` |
 | v3 + app 0.2.0 | 2026-10-20 | Observaciones del operador, botón de reportar en cualquier momento, varias líneas por sesión (Besser 2 en reconfiguración), avisos por correo a mantenimiento y supervisor de área | `db/reversa/v3_reversa.sql` + revertir el merge |
 
 ## QR de los equipos
