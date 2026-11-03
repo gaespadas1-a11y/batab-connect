@@ -35,6 +35,7 @@ y las reglas (autorización, check-list, lecturas) se aplican en la base de dato
 | v8 | 2026-11-03 | Tipos de vehículo para autorizar choferes por capacidad: torton, rabón, camioneta 3 t, utilitario, tractocamión, grúa articulada y telescópica; el SITRAK 8 t pasa a rabón | `db/reversa/v8_reversa.sql` |
 | v9 | 2026-11-03 | Alerta diaria (8:00) de licencias de conducir por vencer a logística de Fábrica Teapa y del CEDIS: a 60, 30, 15, 7, 1 y 0 días, y cada lunes si está vencida | `db/reversa/v9_reversa.sql` |
 | v9b | 2026-11-03 | Alerta de licencias todos los días desde 30 días antes ("Faltan 30 días…", "Faltan 29 días…") y diaria mientras esté vencida | volver a aplicar la función de v9 |
+| v10 | 2026-11-03 | Plataforma del Freightliner M2 (BAT-EM-PLT02), incluida en la compra a Madisa, sin número de serie; hoja de placas QR del M2 para imprimir | ver encabezado de `v10_plataforma_m2.sql` |
 | v3 + app 0.2.0 | 2026-10-20 | Observaciones del operador, botón de reportar en cualquier momento, varias líneas por sesión (Besser 2 en reconfiguración), avisos por correo a mantenimiento y supervisor de área | `db/reversa/v3_reversa.sql` + revertir el merge |
 
 ## QR de los equipos
