@@ -34,6 +34,7 @@ y las reglas (autorización, check-list, lecturas) se aplican en la base de dato
 | v7 + app 0.3.1 | 2026-11-03 | Check-list diario de grúas (13 puntos del manual Palfinger, 10 críticos); grúas sin horómetro (la app oculta la lectura); autorización de prueba de GEHO en la PK23500 | `db/reversa/v7_reversa.sql` + revertir el merge |
 | v8 | 2026-11-03 | Tipos de vehículo para autorizar choferes por capacidad: torton, rabón, camioneta 3 t, utilitario, tractocamión, grúa articulada y telescópica; el SITRAK 8 t pasa a rabón | `db/reversa/v8_reversa.sql` |
 | v9 | 2026-11-03 | Alerta diaria (8:00) de licencias de conducir por vencer a logística de Fábrica Teapa y del CEDIS: a 60, 30, 15, 7, 1 y 0 días, y cada lunes si está vencida | `db/reversa/v9_reversa.sql` |
+| v9b | 2026-11-03 | Alerta de licencias todos los días desde 30 días antes ("Faltan 30 días…", "Faltan 29 días…") y diaria mientras esté vencida | volver a aplicar la función de v9 |
 | v3 + app 0.2.0 | 2026-10-20 | Observaciones del operador, botón de reportar en cualquier momento, varias líneas por sesión (Besser 2 en reconfiguración), avisos por correo a mantenimiento y supervisor de área | `db/reversa/v3_reversa.sql` + revertir el merge |
 
 ## QR de los equipos
