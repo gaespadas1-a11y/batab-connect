@@ -1,4 +1,4 @@
-// connect-api v0.3.0 · BATAB Connect
+// connect-api v0.3.1 · BATAB Connect (avisos separados producción / reparto)
 // Única puerta de la app hacia la base de datos. El navegador nunca toca las tablas.
 // POST { accion, token?, ... }
 //   login    { codigo, pin }                     -> { ok, token, operador, perfil, sesion }
@@ -13,7 +13,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import bcrypt from "https://esm.sh/bcryptjs@2.4.3";
 
-const VERSION = "0.3.0";
+const VERSION = "0.3.1";
 // Avisos: correo (función enviar-correo). WhatsApp se agrega como segundo canal.
 const CORREO_URL = Deno.env.get("SUPABASE_URL")! + "/functions/v1/enviar-correo";
 const CORREO_GUARD = "BATAB-CORREO-2026";
@@ -101,13 +101,15 @@ const escH = (s: unknown) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "
 const LINEAS: Record<string, string> = { "1B": "Besser 1", "2B": "Besser 2", "3C": "Columbia" };
 const td = 'style="color:#6B7280;padding:2px 12px 2px 0;vertical-align:top"';
 
-async function destinatarios(lineas: string[], esPrueba: boolean) {
-  const { data: dest } = await sb.from("mt_avisos_destinos").select("rol,linea,nombre,email,ambito").eq("activo", true)
+// area: "produccion" (líneas) o "reparto" (camiones y grúas); sale de mt_activos.area_aviso.
+async function destinatarios(lineas: string[], esPrueba: boolean, area = "produccion") {
+  const { data: dest } = await sb.from("mt_avisos_destinos").select("rol,linea,nombre,email,ambito,area_aviso").eq("activo", true)
     .eq("ambito", esPrueba ? "prueba" : "real");
-  const para = (dest || []).filter((d: any) => d.email && (d.rol === "mantenimiento" || d.linea === null || lineas.includes(d.linea)));
+  const para = (dest || []).filter((d: any) => d.email && (d.rol === "mantenimiento" ||
+    ((d.area_aviso || "produccion") === area && (d.linea === null || lineas.includes(d.linea)))));
   return {
     correos: [...new Set(para.map((d: any) => String(d.email).toLowerCase()))],
-    nombres: para.map((d: any) => `${d.nombre} (${d.rol === "mantenimiento" ? "taller" : "área"})`),
+    nombres: para.map((d: any) => `${d.nombre} (${d.rol === "mantenimiento" ? "taller" : area === "reparto" ? "reparto" : "área"})`),
   };
 }
 async function enviarCorreo(to: string[], titulo: string, html: string) {
@@ -130,13 +132,13 @@ function pie(nombres: string[], esPrueba: boolean) {
 async function avisar(ids: string[]) {
   if (!ids?.length) return;
   const { data: reps } = await sb.from("mt_reportes")
-    .select("id,folio,tipo,critico,puede_operar,descripcion,lineas,origen,created_at,operador_id,activo:mt_activos(codigo,nombre,estado),operador:operadores(nombre)")
+    .select("id,folio,tipo,critico,puede_operar,descripcion,lineas,origen,created_at,operador_id,activo:mt_activos(codigo,nombre,estado,area_aviso),operador:operadores(nombre)")
     .in("id", ids).order("folio");
   if (!reps?.length) return;
   const r0: any = reps[0];
   const esPrueba = (await perfil(r0.operador_id)).es_prueba;
   const lineas = [...new Set(reps.flatMap((r: any) => r.lineas || []))] as string[];
-  const { correos, nombres } = await destinatarios(lineas, esPrueba);
+  const { correos, nombres } = await destinatarios(lineas, esPrueba, r0.activo?.area_aviso || "produccion");
   const { data: fotos } = await sb.from("mt_reporte_fotos").select("ruta").in("reporte_id", ids).order("created_at");
   const urls = await enlaces((fotos || []).map((f: any) => f.ruta), DIAS_ENLACE_CORREO * 86400);
 
@@ -174,11 +176,11 @@ async function avisar(ids: string[]) {
 // Aviso de equipo liberado por el taller.
 async function avisarLiberado(reporteId: string, quien: string, nota: string) {
   const { data: r } = await sb.from("mt_reportes")
-    .select("id,folio,descripcion,lineas,operador_id,activo:mt_activos(codigo,nombre)").eq("id", reporteId).maybeSingle();
+    .select("id,folio,descripcion,lineas,operador_id,activo:mt_activos(codigo,nombre,area_aviso)").eq("id", reporteId).maybeSingle();
   if (!r) return;
   const rr: any = r;
   const esPrueba = (await perfil(rr.operador_id)).es_prueba;
-  const { correos, nombres } = await destinatarios(rr.lineas || [], esPrueba);
+  const { correos, nombres } = await destinatarios(rr.lineas || [], esPrueba, rr.activo?.area_aviso || "produccion");
   const titulo = `${esPrueba ? "PRUEBA · " : ""}Equipo LIBERADO · ${rr.activo?.codigo}`;
   const html =
     `<p style="margin:0 0 12px"><b style="color:#15803D">El equipo quedó OPERATIVO y se puede volver a usar.</b></p>` +

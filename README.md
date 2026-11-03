@@ -30,6 +30,7 @@ y las reglas (autorización, check-list, lecturas) se aplican en la base de dato
 | v5 | 2026-11-03 | Camiones SITRAK (CAM01 arrendado, TRC01 y CAM02 comprados), grúas Palfinger e IMT como equipos propios montados en su camión, arrendamiento puro como forma de adquisición; la ficha del QR ya no muestra datos del contrato. Montos de contratos cargados fuera del repositorio | `db/reversa/v5_reversa.sql` + función de v3 |
 | v5c | 2026-11-03 | Plataforma de block (BAT-EM-PLT01); grúa Palfinger y plataforma registradas como propiedad de BATAB con BATAB como beneficiario preferente del seguro | `db/reversa/v5c_reversa.sql` |
 | v5e | 2026-11-03 | Camión Freightliner M2 (BAT-EM-CAM03) con grúa Palfinger PK23500 (BAT-EM-GRU03) | ver encabezado de `v5e_freightliner_pk23500.sql` |
+| v6 + api 0.3.1 | 2026-11-03 | Avisos separados: camiones, grúas y plataforma avisan al supervisor de logística y distribución (Erick Pérez); el cargador y las líneas siguen avisando a producción; el taller recibe todo | `db/reversa/v6_reversa.sql` + desplegar connect-api 0.3.0 |
 | v3 + app 0.2.0 | 2026-10-20 | Observaciones del operador, botón de reportar en cualquier momento, varias líneas por sesión (Besser 2 en reconfiguración), avisos por correo a mantenimiento y supervisor de área | `db/reversa/v3_reversa.sql` + revertir el merge |
 
 ## QR de los equipos
