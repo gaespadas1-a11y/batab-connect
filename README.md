@@ -28,6 +28,7 @@ y las reglas (autorización, check-list, lecturas) se aplican en la base de dato
 | app 0.1.1 | 2026-10-20 | Ícono oficial (engrane con QR) y opción de agregar a la pantalla de inicio | Revertir el merge en GitHub |
 | v4 + app 0.3.0 | 2026-10-21 | Fotos de evidencia, puestos en Connect (taller, supervisor, dirección), bandeja de reportes, atender y liberar equipo, usuarios de prueba con avisos solo al Director | `db/reversa/v4_reversa.sql` + revertir el merge |
 | v5 | 2026-11-03 | Camiones SITRAK (CAM01 arrendado, TRC01 y CAM02 comprados), grúas Palfinger e IMT como equipos propios montados en su camión, arrendamiento puro como forma de adquisición; la ficha del QR ya no muestra datos del contrato. Montos de contratos cargados fuera del repositorio | `db/reversa/v5_reversa.sql` + función de v3 |
+| v5c | 2026-11-03 | Plataforma de block (BAT-EM-PLT01); grúa Palfinger y plataforma registradas como propiedad de BATAB con BATAB como beneficiario preferente del seguro | `db/reversa/v5c_reversa.sql` |
 | v3 + app 0.2.0 | 2026-10-20 | Observaciones del operador, botón de reportar en cualquier momento, varias líneas por sesión (Besser 2 en reconfiguración), avisos por correo a mantenimiento y supervisor de área | `db/reversa/v3_reversa.sql` + revertir el merge |
 
 ## QR de los equipos
