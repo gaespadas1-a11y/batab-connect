@@ -61,6 +61,7 @@ input.pin{letter-spacing:10px;text-align:center;font-family:'JetBrains Mono',mon
 .alert.bad{background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.4)}
 .alert.ok{background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.4)}
 .alert.warn{background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.4)}
+.alert.info{background:rgba(96,165,250,.12);border:1px solid rgba(96,165,250,.4)}
 .live{display:flex;align-items:center;gap:8px;color:var(--ok);font-weight:600;font-size:14px}
 .live i{width:9px;height:9px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 0 rgba(34,197,94,.7);animation:pulse 1.6s infinite}
 @keyframes pulse{70%{box-shadow:0 0 0 10px rgba(34,197,94,0)}100%{box-shadow:0 0 0 0 rgba(34,197,94,0)}}
@@ -108,7 +109,7 @@ footer{text-align:center;color:var(--ink3);font-size:11px;padding:24px 0 8px}
 </div>
 
 <script>
-const VERSION = "0.3.1";
+const VERSION = "0.4.0";
 const NOMBRE_LINEA = { "1B": "Besser 1", "2B": "Besser 2", "3C": "Columbia" };
 const API = "https://szrcmvlgxxpmvgrfmxak.supabase.co/functions/v1/connect-api";
 document.getElementById("ver").textContent = VERSION;
@@ -330,6 +331,7 @@ async function abrirFicha(qr) {
       ${!f.requiere_checklist ? `<p class="muted" style="text-align:center">El check-list de este equipo ya se hizo en este turno.</p>` : ""}` : ""}
     ${ses && ses.es_mia ? `<button class="btn danger big" onclick="vistaCerrar()">Terminar uso</button>` : ""}
     <button class="btn ghost" onclick="vistaReportar(S.qr)">⚠ Reportar falla u observación</button>
+    ${tiene("seguridad", "director") ? `<button class="btn ghost" onclick="vistaSeguridad()">🛡 Equipo de seguridad · revisión y entrega</button>` : ""}
 
     ${(f.reportes_abiertos || []).length ? `<h2>Reportes abiertos</h2>
       ${f.reportes_abiertos.map(r => `<div class="item ${r.critico ? "falla" : ""}">
@@ -515,7 +517,7 @@ async function enviarReporte() {
 }
 
 /* ---------------- Perfil ---------------- */
-const NOMBRE_PUESTO = { operador: "Operador", mantenimiento: "Taller de mantenimiento", supervisor_area: "Supervisor de área", almacen: "Almacén", director: "Dirección" };
+const NOMBRE_PUESTO = { operador: "Operador", mantenimiento: "Taller de mantenimiento", supervisor_area: "Supervisor de área", almacen: "Almacén", director: "Dirección", seguridad: "Seguridad" };
 const roles = () => S.perfil?.roles || ["operador"];
 const tiene = (...r) => roles().some(x => r.includes(x));
 const puestos = () => roles().map(r => NOMBRE_PUESTO[r] || r).join(", ");
@@ -699,6 +701,62 @@ async function enviarCierre() {
       Tiempo: ${fmtNum(r.horas)} h${r.horas_horometro != null ? ` · Horómetro: ${fmtNum(r.horas_horometro)} h` : ""}
       ${r.costo_mano_obra != null ? `<br><span class="muted">Mano de obra: $${fmtNum(r.costo_mano_obra)}</span>` : ""}</div>`);
   } catch (e) { ocupado(b, false, "Terminar"); }
+}
+
+/* ---------------- Equipo de seguridad (puesto Seguridad) ---------------- */
+let SEG = null;
+async function vistaSeguridad(msg) {
+  clearInterval(S.timer);
+  $(`<div class="card" style="text-align:center"><div class="spinner" style="margin:20px auto;color:var(--accent)"></div>Cargando equipo de seguridad…</div>`);
+  let r; try { r = await api("seguridad_ficha", { qr: S.qr }); } catch (e) { return; }
+  if (!r.ok) return abrirFicha(S.qr).then(() => document.getElementById("app").insertAdjacentHTML("afterbegin", `<div class="alert bad">${esc(r.error)}</div>`));
+  SEG = r;
+  const ult = r.ultima_entrega;
+  const fila = (it) => `
+    <div class="item" id="seg_${it.codigo}">
+      <div class="q"><b>${esc(it.nombre)}</b></div>
+      <div style="display:grid;grid-template-columns:1fr 1.4fr;gap:8px">
+        <div><label style="margin:0 0 4px">Cantidad</label>
+          <input type="number" min="0" inputmode="numeric" id="segc_${it.codigo}" value="${it.cantidad ?? it.sugerida}"></div>
+        <div><label style="margin:0 0 4px">Estado</label>
+          <select id="sege_${it.codigo}">
+            ${[["ok","Bueno"],["falta","Falta"],["danado","Dañado"],["vencido","Vencido"]].map(([v,t]) => `<option value="${v}" ${(it.estado || "ok") === v ? "selected" : ""}>${t}</option>`).join("")}
+          </select></div>
+      </div>
+      ${it.requiere_caducidad ? `<label style="margin:8px 0 4px">${esc(it.nota_caducidad || "Caducidad")}</label>
+        <input type="date" id="segv_${it.codigo}" value="${it.vence_en || ""}">` : ""}
+    </div>`;
+  $(`
+    <h1>Equipo de seguridad</h1>
+    <p class="sub">${esc(r.activo.nombre)} · <span class="mono">${esc(r.activo.codigo)}</span></p>
+    ${msg || ""}
+    ${ult ? `<div class="alert info">Última entrega: acta #${ult.folio} · ${new Date(ult.fecha).toLocaleDateString("es-MX")}${ult.recibio ? " · recibió " + esc(ult.recibio) : ""}</div>` : `<div class="alert warn">Esta unidad todavía no tiene entrega de equipo de seguridad.</div>`}
+    ${r.items.map(fila).join("")}
+    <div class="card">
+      <label for="segRec">Chofer que recibe</label>
+      <select id="segRec"><option value="">— Solo revisión, sin entrega —</option>
+        ${(r.choferes || []).map(c => `<option value="${c.id}">${esc(c.nombre)}</option>`).join("")}</select>
+      <label for="segNot">Notas <span class="muted">(opcional)</span></label>
+      <textarea id="segNot" rows="2" style="width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:12px;font:15px Inter,sans-serif"></textarea>
+    </div>
+    <button class="btn primary big" id="bSeg" onclick="guardarSeguridad()">Guardar y enviar acta</button>
+    <button class="btn ghost" onclick="abrirFicha(S.qr)">Regresar</button>
+  `);
+}
+async function guardarSeguridad() {
+  const b = document.getElementById("bSeg");
+  const items = SEG.items.map(it => ({
+    codigo: it.codigo,
+    cantidad: Number(document.getElementById("segc_" + it.codigo).value || 0),
+    estado: document.getElementById("sege_" + it.codigo).value,
+    vence_en: it.requiere_caducidad ? document.getElementById("segv_" + it.codigo).value : null,
+  }));
+  ocupado(b, true);
+  try {
+    const r = await api("seguridad_registrar", { qr: S.qr, items, recibe: document.getElementById("segRec").value || null, notas: document.getElementById("segNot").value });
+    if (!r.ok) { ocupado(b, false, "Guardar y enviar acta"); return alert(r.error); }
+    vistaSeguridad(`<div class="alert ok"><b>Acta #${r.folio} guardada.</b><br>Se envió por correo a: ${esc((r.enviado_a || []).join(", ") || "—")}</div>`);
+  } catch (e) { ocupado(b, false, "Guardar y enviar acta"); }
 }
 
 iniciarApp();

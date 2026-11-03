@@ -1,4 +1,4 @@
-// connect-api v0.3.1 · BATAB Connect (avisos separados producción / reparto)
+// connect-api v0.4.0 · BATAB Connect (equipo de seguridad por unidad)
 // Única puerta de la app hacia la base de datos. El navegador nunca toca las tablas.
 // POST { accion, token?, ... }
 //   login    { codigo, pin }                     -> { ok, token, operador, perfil, sesion }
@@ -10,10 +10,12 @@
 //   reportar { token, qr?, tipo, puede_operar, descripcion, fotos[] }  (mt_reportar) + aviso
 //   bandeja  { token, estados? }                 (mt_bandeja) con enlaces temporales a fotos
 //   estado_reporte { token, reporte_id, estado, nota, liberar, fotos[] }  (mt_reporte_estado) + aviso si se libera
+//   seguridad_ficha     { token, qr }                       (mt_seguridad_ficha)
+//   seguridad_registrar { token, qr, items[], recibe, notas } (mt_seguridad_registrar) + acta por correo
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import bcrypt from "https://esm.sh/bcryptjs@2.4.3";
 
-const VERSION = "0.3.1";
+const VERSION = "0.4.0";
 // Avisos: correo (función enviar-correo). WhatsApp se agrega como segundo canal.
 const CORREO_URL = Deno.env.get("SUPABASE_URL")! + "/functions/v1/enviar-correo";
 const CORREO_GUARD = "BATAB-CORREO-2026";
@@ -106,7 +108,7 @@ async function destinatarios(lineas: string[], esPrueba: boolean, area = "produc
   const { data: dest } = await sb.from("mt_avisos_destinos").select("rol,linea,nombre,email,ambito,area_aviso").eq("activo", true)
     .eq("ambito", esPrueba ? "prueba" : "real");
   const para = (dest || []).filter((d: any) => d.email && (d.rol === "mantenimiento" ||
-    ((d.area_aviso || "produccion") === area && (d.linea === null || lineas.includes(d.linea)))));
+    (d.rol === "area" && (d.area_aviso || "produccion") === area && (d.linea === null || lineas.includes(d.linea)))));
   return {
     correos: [...new Set(para.map((d: any) => String(d.email).toLowerCase()))],
     nombres: para.map((d: any) => `${d.nombre} (${d.rol === "mantenimiento" ? "taller" : area === "reparto" ? "reparto" : "área"})`),
@@ -298,6 +300,23 @@ Deno.serve(async (req) => {
         await guardarFotos(String(b.reporte_id), yo.id, b.fotos, data.estado === "en_revision" ? "revision" : "reparacion");
         if (data.equipo_liberado) enSegundoPlano(avisarLiberado(String(b.reporte_id), yo.nombre, nota));
       }
+      return J(data);
+    }
+
+    if (accion === "seguridad_ficha") {
+      const { data, error } = await sb.rpc("mt_seguridad_ficha", { p_operador: yo.id, p_qr: String(b.qr || "").trim() });
+      if (error) return J({ ok: false, error: error.message });
+      return J(data);
+    }
+
+    if (accion === "seguridad_registrar") {
+      const { data, error } = await sb.rpc("mt_seguridad_registrar", {
+        p_operador: yo.id, p_qr: String(b.qr || "").trim(),
+        p_items: Array.isArray(b.items) ? b.items : [],
+        p_recibe: b.recibe ? String(b.recibe) : null,
+        p_notas: b.notas ? String(b.notas).slice(0, 1000) : null,
+      });
+      if (error) return J({ ok: false, error: error.message });
       return J(data);
     }
 
