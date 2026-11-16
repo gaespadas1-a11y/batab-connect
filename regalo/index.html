@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BATAB · 塔巴斯科的讯息 · A message from Tabasco</title>
+<meta name="description" content="BATAB 巴塔布 · 墨西哥塔巴斯科混凝土砌块制造商 · Concrete block manufacturer from Tabasco, Mexico">
+<link rel="icon" type="image/png" href="m/sello.png">
+<style>
+:root{--azul:#1F5FB8;--azul2:#173F86;--amar:#F7D51D;--rojo:#C8161D;--crema:#FBF3E4;--tinta:#1d2430}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--crema);color:var(--tinta);font-family:-apple-system,"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans CJK SC","Segoe UI",Roboto,sans-serif;font-size:18px;line-height:1.6}
+.en{display:block;color:#4a5872;font-style:italic;font-size:.9em;line-height:1.45;margin-top:.25em}
+section{padding:44px 22px;max-width:760px;margin:0 auto}
+h2{font-size:1.7em;line-height:1.25;margin:0 0 .2em;color:var(--rojo)}
+h2 .en{color:var(--azul2);font-size:.55em;font-weight:700}
+.bar{height:4px;width:64px;background:var(--amar);border-radius:2px;margin:12px 0 20px}
+p{margin:0 0 16px}
+
+/* HERO */
+.hero{position:relative;min-height:100svh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:#fff;overflow:hidden;padding:40px 22px 70px}
+.hero video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0}
+.hero:before{content:"";position:absolute;inset:0;z-index:1;background:linear-gradient(180deg,rgba(23,63,134,.55),rgba(23,63,134,.82) 70%,rgba(23,63,134,.95))}
+.hero>*{position:relative;z-index:2}
+.hero .seal{width:min(62vw,280px);filter:drop-shadow(0 8px 18px rgba(0,0,0,.45));margin-bottom:22px}
+.hero h1{font-size:clamp(1.7em,6.4vw,2.6em);line-height:1.3;margin:0;color:var(--amar);text-shadow:0 2px 8px rgba(0,0,0,.4)}
+.hero .en{color:#fff;font-size:1.05em;margin-top:10px}
+.hero .gift{margin-top:26px;font-weight:700;letter-spacing:2px;font-size:1em;border:2px solid var(--amar);border-radius:999px;padding:8px 20px}
+.down{position:absolute;bottom:18px;left:50%;transform:translateX(-50%);z-index:2;font-size:28px;color:var(--amar);animation:b 1.8s infinite}
+@keyframes b{0%,100%{transform:translate(-50%,0)}50%{transform:translate(-50%,8px)}}
+
+/* STORY */
+.card{background:#fff;border-radius:18px;padding:22px 22px 8px;box-shadow:0 6px 22px rgba(23,63,134,.08);margin-bottom:18px;border-top:5px solid var(--azul)}
+.card h3{margin:0 0 .4em;color:var(--azul2);font-size:1.25em}
+.card h3 .en{font-size:.72em;color:#4a5872}
+.fact{display:flex;gap:14px;align-items:flex-start;margin:0 0 16px}
+.fact b{flex:0 0 auto;background:var(--rojo);color:#fff;border-radius:12px;padding:4px 10px;font-size:.95em;margin-top:3px}
+
+/* STATS */
+.blue{background:linear-gradient(160deg,var(--azul),var(--azul2));color:#fff;max-width:none}
+.blue .inner{max-width:760px;margin:0 auto}
+.blue h2{color:var(--amar)}.blue h2 .en,.blue .en{color:#dbe6ff}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:22px 0}
+.stat{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.25);border-radius:16px;padding:16px;text-align:center}
+.stat .n{font-size:2.1em;font-weight:800;color:var(--amar);line-height:1.1}
+.stat .l{font-size:.95em}.stat .l .en{font-size:.85em}
+.media{width:100%;border-radius:16px;display:block;margin:14px 0;box-shadow:0 8px 24px rgba(0,0,0,.25)}
+
+/* PRODUCTS */
+.prod{display:grid;grid-template-columns:1fr;gap:12px;margin-top:10px}
+.pr{display:flex;gap:16px;align-items:center;background:#fff;border-radius:16px;padding:14px 16px;box-shadow:0 4px 16px rgba(23,63,134,.07)}
+.pr img{width:68px;height:68px;flex:0 0 auto;background:#fff;border-radius:12px}
+.pr .t{font-weight:800;color:var(--azul2);font-size:1.15em}
+.pr .t span{color:var(--rojo);margin-left:6px}
+.pr .d{font-size:.95em}.pr .d .en{font-size:.9em}
+
+/* WISH + CONTACT */
+.wish{text-align:center}
+.wish .big{font-size:clamp(1.8em,7vw,2.6em);font-weight:800;color:var(--rojo);line-height:1.3}
+.wish .en{font-size:1.05em}
+.contact a{display:flex;align-items:center;gap:14px;text-decoration:none;color:var(--tinta);background:#fff;border-radius:16px;padding:16px 18px;margin-bottom:12px;box-shadow:0 4px 16px rgba(23,63,134,.07);font-size:1.05em}
+.contact a .ic{width:46px;height:46px;border-radius:50%;display:grid;place-items:center;flex:0 0 auto;font-size:22px;color:#fff;background:var(--azul)}
+.contact a.wa .ic{background:#25D366}
+.contact small{display:block;color:#4a5872;font-size:.85em}
+.addr{font-size:.95em;color:#3a4558;margin-top:18px}
+footer{background:var(--azul2);color:#cfdcff;text-align:center;padding:26px 20px 34px;font-size:.9em}
+footer img{width:120px;border-radius:8px;margin-bottom:10px}
+.lang{position:fixed;top:12px;right:12px;z-index:5;background:rgba(255,255,255,.92);border-radius:999px;padding:6px 12px;font-size:.8em;font-weight:700;color:var(--azul2);box-shadow:0 2px 8px rgba(0,0,0,.15)}
+</style>
+</head>
+<body>
+
+
+
+<header class="hero">
+  <video autoplay muted loop playsinline poster="m/aereo.jpg"><source src="m/aereo.mp4" type="video/mp4"></video>
+  <img class="seal" src="m/sello.png" alt="BATAB 巴塔布">
+  <h1>一千二百多年前，<br>玛雅人把讯息藏在砖里。<br>这是我们的讯息。</h1>
+  <span class="en">Over 1,200 years ago, the Maya hid messages in their bricks. This one is ours.</span>
+  <div class="gift">BATAB 敬赠 · A gift from BATAB</div>
+  <div class="down">⌄</div>
+</header>
+
+<section>
+  <h2>砖与可可<span class="en">Brick and cacao</span></h2>
+  <div class="bar"></div>
+  <div class="card">
+    <h3>科马尔卡尔科 · 烤盘之家<span class="en">Comalcalco, the house of the comales</span></h3>
+    <div class="fact"><b>2000+</b><div>位于墨西哥东南部塔巴斯科州的科马尔卡尔科，拥有两千多年的历史。<span class="en">Comalcalco, in Tabasco, southeastern Mexico, has over 2,000 years of history.</span></div></div>
+    <div class="fact"><b>砖</b><div>当地没有石头，玛雅人便用烧制的砖建造神庙，并在砖中刻下数千条隐藏的讯息。<span class="en">With no stone nearby, the Maya built temples of fired brick and carved thousands of hidden messages into them.</span></div></div>
+    <div class="fact"><b>可可</b><div>它的名字意为“烤盘之家”——正是烘烤可可的器具。今天，这里仍是墨西哥最重要的可可产区。<span class="en">Its name means "house of the comales," the griddles used to roast cacao. Today it is still Mexico's leading cacao region.</span></div></div>
+  </div>
+  <div class="card">
+    <h3>今天的我们<span class="en">Who we are today</span></h3>
+    <p>在同属塔巴斯科州的特阿帕（意为“石之河岸”），BATAB 把石头变成砌块。像那些玛雅建造者一样，我们也为您留下一条讯息：感谢您的友谊。<span class="en">In Teapa, also in Tabasco, whose name means "riverbank of stones," BATAB turns stone into block. Like those Maya builders, we leave you a message: thank you for your friendship.</span></p>
+  </div>
+</section>
+
+<section class="blue">
+  <div class="inner">
+    <h2>BATAB 巴塔布<span class="en">Bloques y Agregados de Tabasco</span></h2>
+    <div class="bar"></div>
+    <p>墨西哥家族企业，二十多年来在特阿帕工厂生产混凝土砌块，采用自动配料系统，每批产品都经过质量检测。<span class="en">A Mexican family company making concrete block for over 20 years at our Teapa plant, with automatic batching and quality control on every lot.</span></p>
+    <div class="stats">
+      <div class="stat"><div class="n">20+</div><div class="l">年经验<span class="en">years of experience</span></div></div>
+      <div class="stat"><div class="n">1,300+</div><div class="l">客户<span class="en">customers</span></div></div>
+      <div class="stat"><div class="n">5</div><div class="l">产品系列<span class="en">product lines</span></div></div>
+      <div class="stat"><div class="n">3</div><div class="l">生产线<span class="en">production lines</span></div></div>
+    </div>
+    <video class="media" autoplay muted loop playsinline poster="m/planta.jpg"><source src="m/planta.mp4" type="video/mp4"></video>
+    <p>Besser 与 Columbia 设备生产 · 从工厂和比亚埃尔莫萨配送中心直送工地。<span class="en">Produced on Besser and Columbia machines · delivered from our plant and our Villahermosa distribution center.</span></p>
+    <img class="media" src="m/patio.jpg" alt="BATAB 工厂 · BATAB plant">
+  </div>
+</section>
+
+<section>
+  <h2>我们的产品<span class="en">Our product lines</span></h2>
+  <div class="bar"></div>
+  <div class="prod">
+    <div class="pr"><img src="m/emblema.png" alt=""><div><div class="t">EMBLEMA<span>旗舰</span></div><div class="d">通用砌块，全面可靠。<span class="en">Our flagship, general-purpose block.</span></div></div></div>
+    <div class="pr"><img src="m/fortaleza.png" alt=""><div><div class="t">FORTALEZA<span>高强度</span></div><div class="d">适用于结构与承重。<span class="en">Maximum strength for structure and load.</span></div></div></div>
+    <div class="pr"><img src="m/vitta.png" alt=""><div><div class="t">VITTA<span>住宅</span></div><div class="d">为建造持久的家园而设计。<span class="en">Designed for homes that last.</span></div></div></div>
+    <div class="pr"><img src="m/avance.png" alt=""><div><div class="t">AVANCE<span>高效</span></div><div class="d">性能与成本的平衡之选。<span class="en">Efficient, with balanced performance and cost.</span></div></div></div>
+    <div class="pr"><img src="m/prisma.png" alt=""><div><div class="t">PRISMA<span>装饰</span></div><div class="d">饰面与设计，让墙面更出彩。<span class="en">Finish and design for walls with presence.</span></div></div></div>
+  </div>
+</section>
+
+<section class="wish">
+  <div class="big">愿甜蜜常伴，<br>万事如意</div>
+  <span class="en">May sweetness always be with you.</span>
+  <p style="margin-top:18px;font-weight:700;color:var(--azul2)">Gerardo Espadas<br><span style="font-weight:400;font-size:.9em">Director General · BATAB</span></p>
+</section>
+
+<section class="contact">
+  <h2>联系我们<span class="en">Contact us</span></h2>
+  <div class="bar"></div>
+  <a class="wa" href="https://wa.me/529321052239"><span class="ic">✆</span><span>WhatsApp<small>+52 932 105 2239</small></span></a>
+  <a href="mailto:manager3@batab.mx"><span class="ic">✉</span><span>电子邮件 · Email<small>manager3@batab.mx</small></span></a>
+  <a href="https://batab.mx"><span class="ic">⌂</span><span>网站 · Website<small>batab.mx</small></span></a>
+  <div class="addr"><b>工厂 · Plant:</b> Camino Teapa–San Joaquín, 1ª Sección, Col. Miguel Hidalgo, C.P. 86826, Teapa, Tabasco, México</div>
+</section>
+
+<footer>
+  <img src="m/logo.png" alt="BATAB"><br>
+  Bloques y Agregados de Tabasco · 墨西哥塔巴斯科<br>
+  100% 墨西哥企业 · 100% Mexican company
+</footer>
+</body>
+</html>
