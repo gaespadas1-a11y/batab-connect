@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>China 2026</title>
+<meta name="apple-mobile-web-app-title" content="China 2026">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icono-192.png">
+<meta name="theme-color" content="#0F6B5C">
+<style>
+  body { margin: 0; font-family: -apple-system, system-ui, sans-serif; background: #F3F6F6; color: #13212A; font-size: 22px; line-height: 1.5; }
+  main { max-width: 560px; margin: 0 auto; padding: 32px 22px 48px; text-align: center; }
+  img { width: 150px; height: 150px; border-radius: 34px; box-shadow: 0 6px 20px rgba(0,0,0,.2); }
+  h1 { font-size: 34px; margin: 18px 0 6px; }
+  ol { text-align: left; padding-left: 28px; margin: 22px 0; }
+  li { margin-bottom: 14px; }
+  b { color: #0F6B5C; }
+  a.btn { display: block; background: #0F6B5C; color: #fff; text-decoration: none; font-weight: 700; font-size: 24px; padding: 18px; border-radius: 16px; margin-top: 18px; }
+  .abriendo { font-size: 26px; margin-top: 30px; }
+</style>
+</head>
+<body>
+<main>
+  <img src="icono-512.png" alt="">
+  <h1>China y Corea 2026</h1>
+  <div id="inst">
+    <ol>
+      <li>Toque el botón <b>compartir</b> ⬆️ de Safari.</li>
+      <li>Toque <b>Agregar a pantalla de inicio</b>.</li>
+      <li>Toque <b>Agregar</b>.</li>
+    </ol>
+    <p>Listo: el ícono BATAB queda en su pantalla principal.</p>
+    <a class="btn" id="go" href="#">Abrir la app ahora</a>
+  </div>
+  <p class="abriendo" id="ab" hidden>Abriendo la app…</p>
+</main>
+<script>
+  var APP = "https://claude.ai/artifact/V5omA7FHTyWKqJRmJT2bGh";
+  document.getElementById("go").href = APP;
+  if (/[?&]abrir=1/.test(location.search)) {
+    document.getElementById("inst").hidden = true;
+    document.getElementById("ab").hidden = false;
+    location.replace(APP);
+  } else {
+    // Lo que se guarde en la pantalla de inicio abrirá la app directo
+    history.replaceState(null, "", "?abrir=1");
+  }
+</script>
+</body>
+</html>
