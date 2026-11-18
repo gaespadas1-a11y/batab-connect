@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Atajos China 2026</title>
+<meta name="apple-mobile-web-app-title" content="Atajos">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icono-192.png">
+<meta name="theme-color" content="#0F6B5C">
+<style>
+  body{margin:0;font-family:-apple-system,system-ui,sans-serif;background:#F3F6F6;color:#13212A;font-size:22px;line-height:1.45}
+  main{max-width:560px;margin:0 auto;padding:22px 18px 60px}
+  h1{font-size:30px;margin:6px 0 4px;display:flex;align-items:center;gap:12px}
+  h1 img{width:56px;height:56px;border-radius:14px}
+  h2{font-size:24px;margin:28px 0 10px;color:#0F6B5C}
+  a.b,button.b{display:block;width:100%;box-sizing:border-box;text-align:center;font:700 24px -apple-system,system-ui,sans-serif;padding:18px 14px;border-radius:16px;margin:10px 0;text-decoration:none;border:3px solid transparent;cursor:pointer}
+  .wc{background:#07C160;color:#fff}.wc2{background:#E7F8EE;color:#05793C;border-color:#07C160!important}
+  .wa{background:#25D366;color:#06371B}.tel{background:#0F6B5C;color:#fff}.gris{background:#fff;color:#13212A;border-color:#C9D3D3!important}
+  textarea{width:100%;box-sizing:border-box;font-size:24px;padding:14px;border-radius:14px;border:3px solid #C9D3D3;min-height:120px}
+  .langs{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}
+  .langs button{font:700 22px -apple-system,system-ui,sans-serif;padding:14px;border-radius:14px;border:3px solid #C9D3D3;background:#fff;color:#13212A}
+  .langs button.on{background:#13212A;color:#fff;border-color:#13212A}
+  .nota{background:#FFF4CC;border-left:8px solid #E0A800;padding:12px 14px;border-radius:10px;font-size:20px}
+  #estado{font-size:20px;color:#555;margin-top:8px;min-height:28px}
+</style>
+</head>
+<body>
+<main>
+  <h1><img src="icono-192.png" alt="">Atajos del viaje</h1>
+
+  <h2>WeChat</h2>
+  <a class="b wc" href="weixin://">Abrir WeChat</a>
+  <a class="b wc2" href="weixin://scanqrcode">Escanear QR para pagar</a>
+
+  <h2>WhatsApp</h2>
+  <a class="b wa" href="https://wa.me/5215552174168">💬 Sergio Soto (ASTRAC)</a>
+  <a class="b wa" href="whatsapp://">Abrir WhatsApp</a>
+
+  <h2>Llamar</h2>
+  <a class="b tel" href="tel:+525552174168">📞 Sergio Soto</a>
+  <a class="b gris" href="tel:+8615000233811">📞 Consulado de México en Shanghái</a>
+  <a class="b gris" href="tel:+821094901694">📞 Embajada de México en Seúl</a>
+
+  <h2>🔊 Decir en voz alta</h2>
+  <p style="margin:0 0 8px">Pegue o escriba la frase ya traducida, elija el idioma y toque <b>Escuchar</b>.</p>
+  <textarea id="t" placeholder="Pegue aquí la frase"></textarea>
+  <div class="langs" id="langs">
+    <button data-l="zh-CN" class="on">Chino</button>
+    <button data-l="ko-KR">Coreano</button>
+    <button data-l="en-US">Inglés</button>
+    <button data-l="es-MX">Español</button>
+  </div>
+  <button class="b tel" id="hablar">🔊 Escuchar</button>
+  <button class="b gris" id="pegar">📋 Pegar lo que copié</button>
+  <button class="b gris" id="prueba">Probar el sonido</button>
+  <div id="estado"></div>
+  <p class="nota">Si no se oye nada: quite el <b>modo silencio</b> del iPhone (el botón del costado o la campana del Centro de control) y suba el volumen.</p>
+</main>
+<script>
+  var lang = "zh-CN";
+  var est = document.getElementById("estado");
+  document.getElementById("langs").addEventListener("click", function (e) {
+    var b = e.target.closest("button"); if (!b) return;
+    lang = b.dataset.l;
+    [].forEach.call(this.children, function (x) { x.classList.toggle("on", x === b); });
+  });
+  function decir(txt, l) {
+    if (!window.speechSynthesis) { est.textContent = "Este teléfono no tiene voz disponible."; return; }
+    var ss = window.speechSynthesis; ss.cancel();
+    var u = new SpeechSynthesisUtterance(txt); u.lang = l; u.rate = 0.85;
+    var vs = ss.getVoices(), v = vs.find(function (x) { return x.lang && x.lang.replace("_","-").toLowerCase() === l.toLowerCase(); }) ||
+      vs.find(function (x) { return x.lang && x.lang.slice(0,2).toLowerCase() === l.slice(0,2).toLowerCase(); });
+    if (v) u.voice = v;
+    u.onstart = function () { est.textContent = "Hablando…"; };
+    u.onend = function () { est.textContent = ""; };
+    u.onerror = function (e) { est.textContent = "No se pudo reproducir (" + (e.error || "error") + ")."; };
+    ss.speak(u);
+  }
+  document.getElementById("hablar").addEventListener("click", function () {
+    var t = document.getElementById("t").value.trim();
+    if (!t) { est.textContent = "Primero escriba o pegue una frase."; return; }
+    decir(t, lang);
+  });
+  document.getElementById("pegar").addEventListener("click", function () {
+    if (!navigator.clipboard || !navigator.clipboard.readText) { est.textContent = "Mantenga el dedo en el cuadro y toque Pegar."; return; }
+    navigator.clipboard.readText().then(function (x) { document.getElementById("t").value = x;
+      if (/[가-힯]/.test(x)) document.querySelector('[data-l="ko-KR"]').click();
+      else if (/[一-鿿]/.test(x)) document.querySelector('[data-l="zh-CN"]').click();
+    }).catch(function () { est.textContent = "Mantenga el dedo en el cuadro y toque Pegar."; });
+  });
+  document.getElementById("prueba").addEventListener("click", function () { decir("Hola, el sonido funciona.", "es-MX"); });
+  if (window.speechSynthesis) speechSynthesis.getVoices();
+</script>
+</body>
+</html>
